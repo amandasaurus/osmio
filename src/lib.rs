@@ -83,7 +83,6 @@ mod opl {
     }
 
     impl<R: Read> Iterator for OPLReader<R> {
-    ;wa
         type Item = OSMObj;
         fn next(&mut self) -> Option<Self::Item> {
             None
