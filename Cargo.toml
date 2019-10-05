@@ -1,0 +1,14 @@
+[package]
+name = "osmio"
+version = "0.1.0"
+authors = ["Rory McCann <rory@technomancy.org>"]
+keywords = ["openstreetmap", "osm"]
+license = "AGPL-3.0"
+
+[dependencies]
+xml-rs = "0.3"
+protobuf = "1.0"
+byteorder = "0.5"
+flate2 = "0.2"
+chrono = "0.2"
+separator = "0.4.1"

@@ -1,0 +1,276 @@
+//! Read and write OpenStreetMap fileformats
+//!
+extern crate xml as xml_rs;
+extern crate protobuf;
+extern crate byteorder;
+extern crate flate2;
+extern crate chrono;
+
+use std::collections::HashMap;
+use std::io::{Read, Write};
+use std::iter::Iterator;
+use std::fmt;
+use std::fmt::Debug;
+use utils::{epoch_to_iso, iso_to_epoch};
+
+#[macro_use]
+pub mod utils;
+
+pub mod nodestore;
+
+pub mod xml;
+pub mod pbf;
+//pub mod opl;
+pub mod osc;
+
+mod obj_types;
+
+/// OSM id of object
+pub type ObjId = i64;
+
+/// Latitude
+pub type Lat = f32;
+
+/// Longitude
+pub type Lon = f32;
+
+#[derive(PartialEq, Debug)]
+pub enum TimestampFormat {
+    ISOString(String),
+    EpochNunber(i64),
+}
+
+impl TimestampFormat {
+    pub fn to_iso_string(&self) -> String {
+        match self {
+            &TimestampFormat::ISOString(ref s) => s.clone(),
+            &TimestampFormat::EpochNunber(ref t) => epoch_to_iso(*t as i32),
+        }
+    }
+
+    pub fn to_epoch_number(&self) -> i64 {
+        match self {
+            &TimestampFormat::ISOString(ref s) => iso_to_epoch(s) as i64,
+            &TimestampFormat::EpochNunber(t) => t,
+        }
+    }
+}
+
+impl fmt::Display for TimestampFormat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_iso_string())
+    }
+}
+
+/// The basic metadata fields all OSM objects share
+pub trait OSMObjBase: PartialEq+Debug {
+
+    fn id(&self) -> ObjId;
+    fn set_id(&mut self, val: impl Into<ObjId>);
+    fn version(&self) -> Option<u32>;
+    fn set_version(&mut self, val: impl Into<Option<u32>>);
+    fn deleted(&self) -> bool;
+    fn set_deleted(&mut self, val: bool);
+    fn changeset_id(&self) -> Option<u32>;
+    fn set_changeset_id(&mut self, val: impl Into<Option<u32>>);
+    fn timestamp(&self) -> &Option<TimestampFormat>;
+    fn set_timestamp(&mut self, val: impl Into<Option<TimestampFormat>>);
+    fn uid(&self) -> Option<u32>;
+    fn set_uid(&mut self, val: impl Into<Option<u32>>);
+    fn user(&self) -> Option<&str>;
+    fn set_user(&mut self, val: impl Into<Option<String>>);
+
+    fn tags<'a>(&'a self) -> Box<dyn Iterator<Item=(&'a str, &'a str)>+'a>;
+    fn tag(&self, key: impl AsRef<str>) -> Option<&str>;
+    fn has_tag(&self, key: impl AsRef<str>) -> bool {
+        self.tag(key).is_some()
+    }
+    fn num_tags(&self) -> usize {
+        self.tags().count()
+    }
+
+    fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>);
+    fn unset_tag(&mut self, key: impl AsRef<str>);
+
+}
+
+/// A Node
+pub trait Node: OSMObjBase {
+    fn lat_lon(&self) -> Option<(Lat, Lon)>;
+    fn has_lat_lon(&self) -> bool {
+        self.lat_lon().is_some()
+    }
+
+    fn set_lat_lon(&mut self, loc: impl Into<Option<(Lat, Lon)>>);
+}
+
+/// A Way
+pub trait Way: OSMObjBase {
+    fn nodes(&self) -> &[ObjId];
+    fn num_nodes(&self) -> usize;
+    fn node(&self, idx: usize) -> Option<ObjId>;
+}
+
+/// A Relation
+pub trait Relation: OSMObjBase {
+    fn members<'a>(&'a self) -> Box<dyn Iterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
+}
+
+#[derive(Debug,Clone,PartialEq)]
+pub enum OSMObjectType {
+    Node,
+    Way,
+    Relation,
+}
+
+// TODO FromStr & Display
+
+
+pub trait OSMObj: OSMObjBase {
+    type Node: Node;
+    type Way: Way;
+    type Relation: Relation;
+
+    fn object_type(&self) -> OSMObjectType;
+
+    fn into_node(self) -> Option<Self::Node>;
+    fn into_way(self) -> Option<Self::Way>;
+    fn into_relation(self) -> Option<Self::Relation>;
+
+    fn as_node(&self) -> Option<&Self::Node>;
+    fn as_way(&self) -> Option<&Self::Way>;
+    fn as_relation(&self) -> Option<&Self::Relation>;
+
+    fn is_node(&self) -> bool {
+        self.object_type() == OSMObjectType::Node
+    }
+    fn is_way(&self) -> bool {
+        self.object_type() == OSMObjectType::Way
+    }
+    fn is_relation(&self) -> bool {
+        self.object_type() == OSMObjectType::Relation
+    }
+}
+
+/// A Generic reader that reads OSM objects
+pub trait OSMReader {
+    type R: Read;
+    type Obj: OSMObj;
+
+    fn new(Self::R) -> Self;
+
+    #[allow(unused_variables)]
+    fn set_sorted_assumption(&mut self, sorted_assumption: bool) {}
+    fn get_sorted_assumption(&mut self) -> bool { false }
+
+    fn assume_sorted(&mut self) {
+        self.set_sorted_assumption(true);
+    }
+    fn assume_unsorted(&mut self) {
+        self.set_sorted_assumption(false);
+    }
+    
+    /// Conver to the underlying reader
+    fn into_inner(self) -> Self::R;
+
+    fn next(&mut self) -> Option<Self::Obj>;
+
+    fn objects<'a>(&'a mut self) -> OSMObjectIterator<'a, Self>
+        where Self: Sized
+    {
+        OSMObjectIterator{ inner: self }
+    }
+
+    //fn nodes<'a, N: Node>(&'a mut self) -> Box<dyn Iterator<Item=N>+'a> where Self:Sized {
+    //    if self.get_sorted_assumption() {
+    //        Box::new(self.objects().take_while(|o| o.is_node()).filter_map(|o| o.into_node()))
+    //    } else {
+    //        Box::new(self.objects().filter_map(|o| o.into_node()))
+    //    }
+    //}
+
+    //fn nodes_locations<'a>(&'a mut self) -> Box<Iterator<Item=(ObjId, Lat, Lon)>+'a> where Self:Sized {
+    //    Box::new(self.nodes().filter_map(|n| if n.deleted || n.lat.is_none() { None } else { Some((n.id, n.lat.unwrap(), n.lon.unwrap())) } ))
+    //}
+
+    //fn ways<'a>(&'a mut self) -> Box<Iterator<Item=Way>+'a> where Self:Sized {
+    //    if self.get_sorted_assumption() {
+    //        Box::new(self.objects().take_while(|o| (o.is_node() || o.is_way())).filter_map(|o| o.into_way()))
+    //    } else {
+    //        Box::new(self.objects().filter_map(|o| o.into_way()))
+    //    }
+    //}
+
+    //fn relations<'a>(&'a mut self) -> Box<Iterator<Item=Relation>+'a> where Self:Sized {
+    //    Box::new(self.objects().filter_map(|o| o.into_relation()))
+    //}
+
+}
+
+// FIXME does this have to be public? Can I make it private?
+pub struct OSMObjectIterator<'a, R> where R: OSMReader+'a {
+    inner: &'a mut R,
+}
+
+impl<'a, R> Iterator for OSMObjectIterator<'a, R>  where R: OSMReader {
+    type Item = R::Obj;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+
+/// An error when trying to read from an OSMReader
+#[derive(Debug)]
+pub enum OSMWriteError {
+    AlreadyClosed,
+    OPLWrite(::std::io::Error),
+    XMLWrite(xml_rs::writer::Error),
+
+}
+
+/// A generic writer for OSM objects.
+pub trait OSMWriter<W: Write> {
+    /// Create a writer from an underying writer
+    fn new(W) -> Self;
+
+    /// Close this writer, cannot write any more objects.
+    /// Some fileformats have certain 'end of file' things. After you write those, you cannot write
+    /// any more OSM objects. e.g. an XML file format will require that you close your root XML
+    /// tag.
+    /// After calling this method, you cannot add any more OSM objects to this writer, and
+    /// `is_open` will return `false`.
+    fn close(&mut self);
+
+    /// Return true iff this writer is closed.
+    /// If open you should be able to continue to write objects to it. if closed you cannot write
+    /// any more OSM objects to it.
+    fn is_open(&self) -> bool;
+
+    /// Write an OSM object to this.
+    fn write_obj(&mut self, obj: &impl OSMObj) -> Result<(), OSMWriteError>;
+
+    /// Convert back to the underlying writer object
+    fn into_inner(self) -> W;
+
+    /// Create a new OSMWriter, consume all the objects from an OSMObj iterator source, and then
+    /// close this source. Returns this OSMWriter.
+    fn from_iter<I: Iterator<Item=impl OSMObj>>(writer: W, iter: I) -> Self where Self: Sized {
+        let mut writer = Self::new(writer);
+
+        // FIXME return the results of these operations?
+        for obj in iter {
+            writer.write_obj(&obj).unwrap();
+        }
+        writer.close();
+
+        writer
+    }
+}
+
+
+/// The version string of this library.
+fn version<'a>() -> &'a str {
+    option_env!("CARGO_PKG_VERSION").unwrap_or("unknown-non-cargo-build")
+}
