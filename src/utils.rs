@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, UTC};
+use chrono::{DateTime, NaiveDateTime, offset::Utc};
 
 macro_rules! try_opt {
     ($e:expr) => ( match $e {
@@ -11,7 +11,7 @@ macro_rules! try_opt {
 
 pub fn epoch_to_iso(epoch: i32) -> String {
     // Chrono is a little silly and can't easily convert from epoch to utc timezone
-    let d: DateTime<UTC> = DateTime::from_utc(NaiveDateTime::from_timestamp(epoch as i64, 0), UTC);
+    let d: DateTime<Utc> = DateTime::from_utc(NaiveDateTime::from_timestamp(epoch as i64, 0), Utc);
     d.to_rfc3339()
 }
 

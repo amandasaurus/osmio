@@ -9,8 +9,9 @@ use super::ObjId;
 use std::iter::Iterator;
 use std::io::{Read, Cursor};
 
-use flate2::{FlateReadExt};
 use super::*;
+
+use flate2::read::ZlibDecoder;
 
 use ::obj_types::{RcNode, RcWay, RcRelation, RcOSMObj};
 
@@ -40,7 +41,7 @@ fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
         let zlib_data = blob.get_zlib_data();
         let cursor = Cursor::new(zlib_data);
         let mut bytes = Vec::with_capacity(blob.get_raw_size() as usize);
-        cursor.zlib_decode().read_to_end(&mut bytes).unwrap(); // FIXME
+        ZlibDecoder::new(cursor).read_to_end(&mut bytes).unwrap(); // FIXME
 
         Some(bytes)
     } else {
