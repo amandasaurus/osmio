@@ -100,6 +100,21 @@ impl OSMObjBase for RcOSMObj {
         }
     }
 
+    fn num_tags(&self) -> usize {
+        match self {
+            RcOSMObj::Node(x) => x._tags.len(),
+            RcOSMObj::Way(x) => x._tags.len(),
+            RcOSMObj::Relation(x) => x._tags.len(),
+        }
+    }
+    fn untagged(&self) -> bool {
+        match self {
+            RcOSMObj::Node(x) => x._tags.is_empty(),
+            RcOSMObj::Way(x) => x._tags.is_empty(),
+            RcOSMObj::Relation(x) => x._tags.is_empty(),
+        }
+    }
+
     fn tag(&self, key: impl AsRef<str>) -> Option<&str>
     {
         match self {
