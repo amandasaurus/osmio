@@ -193,12 +193,9 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
 fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
     let ways = primitive_group.get_ways();
     results.reserve(ways.len());
-    for way in primitive_group.get_ways() {
+    for way in ways {
         let id = way.get_id() as ObjId;
         // TODO check for +itive keys/vals
-        // have to clone the strings, since osm objects have a copy of their tags
-        // TODO I wonder if there's a way to not have to clone the strings, and instead just
-        // keep a reference around? Might make things faster?
         let keys = way.get_keys().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let vals = way.get_vals().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
@@ -207,11 +204,11 @@ fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _
         let refs = way.get_refs();
         let mut nodes = Vec::with_capacity(refs.len());
         // TODO assert node.len() > 0
-        if refs.len() > 0 {
+        if !refs.is_empty() {
             let mut last_id = refs[0];
             nodes.push(last_id as ObjId);
-            for i in 1..refs.len() {
-                last_id = refs[i] + last_id;
+            for nid in &refs[1..] {
+                last_id = nid + last_id;
                 nodes.push(last_id as ObjId);
             }
         }
@@ -247,9 +244,6 @@ fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i
     for relation in primitive_group.get_relations() {
         let id = relation.get_id() as ObjId;
         // TODO check for +itive keys/vals
-        // have to clone the strings, since osm objects have a copy of their tags
-        // TODO I wonder if there's a way to not have to clone the strings, and instead just
-        // keep a reference around? Might make things faster?
         let keys = relation.get_keys().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let vals = relation.get_vals().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
@@ -260,11 +254,11 @@ fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i
         let refs = relation.get_memids();
         let mut member_ids = Vec::with_capacity(refs.len());
         // TODO assert node.len() > 0
-        if refs.len() > 0 {
+        if !refs.is_empty() {
             let mut last_id = refs[0];
             member_ids.push(last_id as ObjId);
-            for i in 1..refs.len() {
-                last_id = refs[i] + last_id;
+            for nid in &refs[1..] {
+                last_id = nid + last_id;
                 member_ids.push(last_id as ObjId);
             }
         }
