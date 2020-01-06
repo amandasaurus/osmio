@@ -217,6 +217,8 @@ pub trait OSMReader {
     /// Conver to the underlying reader
     fn into_inner(self) -> Self::R;
 
+    fn inner(&self) -> &Self::R;
+
     fn next(&mut self) -> Option<Self::Obj>;
 
     fn objects<'a>(&'a mut self) -> OSMObjectIterator<'a, Self>
@@ -254,6 +256,12 @@ pub trait OSMReader {
 // FIXME does this have to be public? Can I make it private?
 pub struct OSMObjectIterator<'a, R> where R: OSMReader+'a {
     inner: &'a mut R,
+}
+
+impl<'a, R> OSMObjectIterator<'a, R>  where R: OSMReader {
+    pub fn inner(&self) -> &R {
+        self.inner
+    }
 }
 
 impl<'a, R> Iterator for OSMObjectIterator<'a, R>  where R: OSMReader {

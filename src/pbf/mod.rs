@@ -54,6 +54,10 @@ impl<R: Read> FileReader<R> {
         FileReader{ reader: reader }
     }
 
+    pub fn inner(&self) -> &R {
+        &self.reader
+    }
+
     pub fn into_inner(self) -> R {
         self.reader
     }
@@ -358,6 +362,10 @@ impl<R: Read> OSMReader for PBFReader<R> {
 
     fn set_sorted_assumption(&mut self, sorted_assumption: bool) { self._sorted_assumption = sorted_assumption; }
     fn get_sorted_assumption(&mut self) -> bool { self._sorted_assumption }
+
+    fn inner(&self) -> &R {
+        self.filereader.inner()
+    }
 
     fn into_inner(self) -> R {
         self.filereader.into_inner()

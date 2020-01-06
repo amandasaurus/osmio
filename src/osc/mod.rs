@@ -23,6 +23,10 @@ impl<R: Read> OSMReader for OSCReader<R> {
         self.parser.into_inner().into_inner().into_inner()
     }
 
+    fn inner(&self) -> &R {
+        unimplemented!()
+    }
+
     fn next(&mut self) -> Option<StringOSMObj> {
         let mut elements = Vec::new();
 
