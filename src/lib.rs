@@ -116,11 +116,46 @@ pub trait Relation: OSMObjBase {
     fn members<'a>(&'a self) -> Box<dyn Iterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
 }
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Clone,PartialEq)]
 pub enum OSMObjectType {
     Node,
     Way,
     Relation,
+}
+
+impl std::fmt::Debug for OSMObjectType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            OSMObjectType::Node => {
+                write!(f, "n")
+            },
+            OSMObjectType::Way => {
+                write!(f, "w")
+            },
+            OSMObjectType::Relation => {
+                write!(f, "r")
+            },
+        }
+    }
+
+}
+
+
+impl std::fmt::Display for OSMObjectType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            OSMObjectType::Node => {
+                write!(f, "node")
+            },
+            OSMObjectType::Way => {
+                write!(f, "way")
+            },
+            OSMObjectType::Relation => {
+                write!(f, "relation")
+            },
+        }
+    }
+
 }
 
 // TODO FromStr & Display
