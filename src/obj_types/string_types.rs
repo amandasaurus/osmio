@@ -90,7 +90,7 @@ impl OSMObjBase for StringOSMObj {
     fn set_user(&mut self, val: impl Into<Option<String>>) { func_call_inner_set!(self, set_user, val); }
 
 
-    fn tags<'a>(&'a self) -> Box<dyn Iterator<Item=(&'a str, &'a str)>+'a>
+    fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
         func_call_inner_get!(self, tags)
     }
@@ -212,7 +212,7 @@ impl OSMObjBase for StringNode {
     fn set_user(&mut self, val: impl Into<Option<String>>) { self._user = val.into(); }
 
 
-    fn tags<'a>(&'a self) -> Box<dyn Iterator<Item=(&'a str, &'a str)>+'a>
+    fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
         Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
     }
@@ -266,7 +266,7 @@ impl OSMObjBase for StringWay {
     fn set_user(&mut self, val: impl Into<Option<String>>) { self._user = val.into(); }
 
 
-    fn tags<'a>(&'a self) -> Box<dyn Iterator<Item=(&'a str, &'a str)>+'a>
+    fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
         Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
     }
@@ -322,7 +322,7 @@ impl OSMObjBase for StringRelation {
     fn set_user(&mut self, val: impl Into<Option<String>>) { self._user = val.into(); }
 
 
-    fn tags<'a>(&'a self) -> Box<dyn Iterator<Item=(&'a str, &'a str)>+'a>
+    fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
         Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
     }
@@ -343,7 +343,7 @@ impl OSMObjBase for StringRelation {
 
 
 impl Relation for StringRelation {
-    fn members<'a>(&'a self) -> Box<dyn Iterator<Item=(OSMObjectType, ObjId, &'a str)>+'a> {
+    fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a> {
         Box::new(self._members.iter().map(|(c, o, r)| (
                 match c { 'n'=> OSMObjectType::Node, 'w'=>OSMObjectType::Way, 'r'=>OSMObjectType::Relation, _ => unreachable!() },
                 o.clone(),

@@ -8,7 +8,7 @@ extern crate chrono;
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::iter::Iterator;
+use std::iter::{Iterator, ExactSizeIterator};
 use std::fmt;
 use std::fmt::Debug;
 use utils::{epoch_to_iso, iso_to_epoch};
@@ -80,7 +80,7 @@ pub trait OSMObjBase: PartialEq+Debug {
     fn user(&self) -> Option<&str>;
     fn set_user(&mut self, val: impl Into<Option<String>>);
 
-    fn tags<'a>(&'a self) -> Box<dyn Iterator<Item=(&'a str, &'a str)>+'a>;
+    fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>;
     fn tag(&self, key: impl AsRef<str>) -> Option<&str>;
     fn has_tag(&self, key: impl AsRef<str>) -> bool {
         self.tag(key).is_some()
@@ -113,7 +113,7 @@ pub trait Way: OSMObjBase {
 
 /// A Relation
 pub trait Relation: OSMObjBase {
-    fn members<'a>(&'a self) -> Box<dyn Iterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
+    fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
 }
 
 #[derive(Clone,PartialEq)]
