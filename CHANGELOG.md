@@ -1,4 +1,4 @@
-# Unreleased
+# v0.2.0 (2020-01-06)
 
 * ISO timeformats are more clearer without milliseconds
 * `OSMObjType` now implemented `Display` (`"node"`/`"way"`/`"relation"`) and `Debug` implemention changed to be single character representing type (`"n"`/`"w"`/`"r"`), and are sortable.
