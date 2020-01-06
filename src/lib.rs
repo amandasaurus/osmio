@@ -89,6 +89,15 @@ pub trait OSMObjBase: PartialEq+Debug {
         self.tags().count()
     }
 
+    /// True iff this object has tags
+    fn tagged(&self) -> bool {
+        !self.untagged()
+    }
+    /// True iff this object has no tags
+    fn untagged(&self) -> bool {
+        self.num_tags() == 0
+    }
+
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>);
     fn unset_tag(&mut self, key: impl AsRef<str>);
 
