@@ -23,7 +23,7 @@ pub mod pbf;
 //pub mod opl;
 pub mod osc;
 
-mod obj_types;
+pub mod obj_types;
 
 /// OSM id of object
 pub type ObjId = i64;
@@ -125,7 +125,7 @@ pub trait Relation: OSMObjBase {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
 }
 
-#[derive(Clone,PartialEq)]
+#[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
 pub enum OSMObjectType {
     Node,
     Way,
