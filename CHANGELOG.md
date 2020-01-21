@@ -1,3 +1,7 @@
+# Unreleased
+
+* Refactor PBF objects internally to be more effecient
+
 # v0.2.0 (2020-01-06)
 
 * ISO timeformats are more clearer without milliseconds

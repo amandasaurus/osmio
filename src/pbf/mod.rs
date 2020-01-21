@@ -3,7 +3,6 @@ use byteorder;
 use byteorder::ReadBytesExt;
 use super::OSMReader;
 use super::TimestampFormat;
-use std::collections::HashMap;
 use std::rc::Rc;
 use super::ObjId;
 use std::iter::Iterator;
@@ -23,15 +22,6 @@ struct FileReader<R: Read> {
     reader: R,
 }
 
-// FIXME use Vec::resize instead?
-fn empty_vec(size: usize) -> Vec<u8> {
-    let mut result = Vec::with_capacity(size);
-    for _ in 0..size { result.push(0u8); }
-    result.shrink_to_fit();
-
-    result
-}
-
 fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
@@ -41,7 +31,7 @@ fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
         let zlib_data = blob.get_zlib_data();
         let cursor = Cursor::new(zlib_data);
         let mut bytes = Vec::with_capacity(blob.get_raw_size() as usize);
-        ZlibDecoder::new(cursor).read_to_end(&mut bytes).unwrap(); // FIXME
+        ZlibDecoder::new(cursor).read_to_end(&mut bytes).ok()?;
 
         Some(bytes)
     } else {
@@ -66,14 +56,14 @@ impl<R: Read> FileReader<R> {
         loop {
             // FIXME is there a way we can ask self.reader if it's at EOF? Rather than waiting for
             // the failure and catching that?
-            let size = try_opt!(self.reader.read_u32::<byteorder::BigEndian>().ok());
-            let mut header_bytes_vec = empty_vec(size as usize);
+            let size = self.reader.read_u32::<byteorder::BigEndian>().ok()?;
+            let mut header_bytes_vec = vec![0; size as usize];
 
             self.reader.read_exact(header_bytes_vec.as_mut_slice()).unwrap();
 
             let blob_header: fileformat::BlobHeader = protobuf::parse_from_bytes(&header_bytes_vec).unwrap();
 
-            let mut blob_bytes = empty_vec(blob_header.get_datasize() as usize);
+            let mut blob_bytes = vec![0; blob_header.get_datasize() as usize];
             self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
 
             if blob_header.get_field_type() != "OSMData" {
@@ -158,7 +148,11 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
             }
         }
 
-        let tags: HashMap<_, _> = tags.iter().map(|&(kidx, vidx)| (stringtable[kidx as usize].clone(), stringtable[vidx as usize].clone())). filter_map(|(k, v)| match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None }).collect();
+        let tags: Vec<_> = tags.iter()
+            .map(|&(kidx, vidx)| (stringtable[kidx as usize].clone(), stringtable[vidx as usize].clone()))
+            .filter_map(|(k, v)|
+                match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None })
+            .collect();
 
         let changeset_id = changesets[index] + last_changset;
         last_changset = changeset_id;
@@ -199,7 +193,7 @@ fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _
         let keys = way.get_keys().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let vals = way.get_vals().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
-        let tags: HashMap<_, _> = tags.filter_map(|(k, v)| match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None }).collect();
+        let tags: Vec<_> = tags.filter_map(|(k, v)| match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None }).collect();
 
         let refs = way.get_refs();
         let mut nodes = Vec::with_capacity(refs.len());
@@ -247,7 +241,7 @@ fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i
         let keys = relation.get_keys().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let vals = relation.get_vals().into_iter().map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
-        let tags: HashMap<_, _> = tags.filter_map(|(k, v)| match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None }).collect();
+        let tags: Vec<_> = tags.filter_map(|(k, v)| match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None }).collect();
 
         let roles = relation.get_roles_sid().into_iter().map(|&idx| stringtable[idx as usize].clone());
 
