@@ -125,7 +125,7 @@ pub trait Relation: OSMObjBase {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
 }
 
-#[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
+#[derive(Copy,Clone,PartialEq,Eq,PartialOrd,Ord)]
 pub enum OSMObjectType {
     Node,
     Way,
