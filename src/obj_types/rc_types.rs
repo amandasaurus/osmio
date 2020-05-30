@@ -22,7 +22,7 @@ macro_rules! func_call_inner_set {
 }
 
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct RcNode {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -37,7 +37,7 @@ pub struct RcNode {
 }
 
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct RcWay {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -51,7 +51,7 @@ pub struct RcWay {
     pub(crate) _nodes: Vec<ObjId>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct RcRelation {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -65,7 +65,7 @@ pub struct RcRelation {
     pub(crate) _members: Vec<(char, ObjId, Rc<str>)>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum RcOSMObj {
     Node(RcNode),
     Way(RcWay),
