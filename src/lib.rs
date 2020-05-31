@@ -34,7 +34,7 @@ pub type Lat = f32;
 /// Longitude
 pub type Lon = f32;
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TimestampFormat {
     ISOString(String),
     EpochNunber(i64),
@@ -63,7 +63,7 @@ impl fmt::Display for TimestampFormat {
 }
 
 /// The basic metadata fields all OSM objects share
-pub trait OSMObjBase: PartialEq+Debug {
+pub trait OSMObjBase: PartialEq+Debug+Clone {
 
     fn id(&self) -> ObjId;
     fn set_id(&mut self, val: impl Into<ObjId>);
@@ -125,7 +125,7 @@ pub trait Relation: OSMObjBase {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
 }
 
-#[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
+#[derive(Copy,Clone,PartialEq,Eq,PartialOrd,Ord)]
 pub enum OSMObjectType {
     Node,
     Way,

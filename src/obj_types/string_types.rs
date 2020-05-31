@@ -20,7 +20,7 @@ macro_rules! func_call_inner_set {
     )
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct StringNode {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -35,7 +35,7 @@ pub struct StringNode {
 }
 
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct StringWay {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -49,7 +49,7 @@ pub struct StringWay {
     pub(crate) _nodes: Vec<ObjId>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct StringRelation {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -63,7 +63,7 @@ pub struct StringRelation {
     pub(crate) _members: Vec<(char, ObjId, String)>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum StringOSMObj {
     Node(StringNode),
     Way(StringWay),
