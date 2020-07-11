@@ -290,8 +290,8 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         self._state = State::Closed;
     }
 
-    fn write_obj(&mut self, _obj: &impl OSMObj) -> Result<(), OSMWriteError> {
-        //use xml_rs::writer::XmlEvent;
+    fn write_obj(&mut self, obj: &impl OSMObj) -> Result<(), OSMWriteError> {
+        use xml_rs::writer::XmlEvent;
 
         match self._state {
             State::Initial => self.ensure_header()?,    // This will update self._state
@@ -299,7 +299,17 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             State::Closed => return Err(OSMWriteError::AlreadyClosed),
         }
 
-        unimplemented!();
+        let tag_name = format!("{:?}", obj.object_type());
+        let mut xml_el = XmlEvent::start_element(tag_name)
+                .attr("id", &obj.id().to_string())
+                //.attr("visible", if obj.deleted() { "false" } else { "true" })
+                //.attr("version", &obj.version().unwrap().to_string())
+                //.attr("user", &obj.user().unwrap().to_string())
+                //.attr("uid", &obj.uid().unwrap().to_string())
+                //.attr("changeset", &obj.changeset_id().unwrap().to_string())
+                //.attr("timestamp", &obj.timestamp().unwrap().to_string())
+                ;
+
         //match obj {
         //    &OSMObj::Node(ref n) => {
         //        let id = n.id.to_string();
@@ -323,6 +333,8 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         //        }
         //        self.writer.write(XmlEvent::end_element())?;
         //    },
+        //    _ => unimplemented!(),
+        //}
         //    &OSMObj::Way(ref w) => {
         //        self.writer.write(XmlEvent::start_element("way")
         //            .attr("id", &w.id.to_string())
@@ -372,7 +384,8 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         //        self.writer.write(XmlEvent::end_element())?;
         //    },
         //}
-        //Ok(())
+
+        Ok(())
     }
 
     fn into_inner(self) -> W {
