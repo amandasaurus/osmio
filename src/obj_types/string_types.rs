@@ -79,6 +79,16 @@ pub enum StringOSMObj {
     Relation(StringRelation),
 }
 
+impl From<StringNode> for StringOSMObj {
+    fn from(n: StringNode) -> Self { StringOSMObj::Node(n) }
+}
+impl From<StringWay> for StringOSMObj {
+    fn from(w: StringWay) -> Self { StringOSMObj::Way(w) }
+}
+impl From<StringRelation> for StringOSMObj {
+    fn from(r: StringRelation) -> Self { StringOSMObj::Relation(r) }
+}
+
 
 impl OSMObjBase for StringOSMObj {
 
