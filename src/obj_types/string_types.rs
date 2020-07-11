@@ -21,21 +21,26 @@ macro_rules! func_call_inner_set {
 }
 
 #[derive(PartialEq, Debug, Builder)]
+#[builder(setter(strip_option))]
 pub struct StringNode {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
+
+    #[builder(default="false")]
     pub(crate) _deleted: bool,
     pub(crate) _changeset_id: Option<u32>,
     pub(crate) _timestamp: Option<TimestampFormat>,
     pub(crate) _uid: Option<u32>,
     pub(crate) _user: Option<String>,
+
+    #[builder(default="HashMap::new()")]
     pub(crate) _tags: HashMap<String, String>,
 
     pub(crate) _lat_lon: Option<(Lat, Lon)>,
 }
 
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Builder)]
 pub struct StringWay {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -44,12 +49,14 @@ pub struct StringWay {
     pub(crate) _timestamp: Option<TimestampFormat>,
     pub(crate) _uid: Option<u32>,
     pub(crate) _user: Option<String>,
+
+    #[builder(default="HashMap::new()")]
     pub(crate) _tags: HashMap<String, String>,
 
     pub(crate) _nodes: Vec<ObjId>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Builder)]
 pub struct StringRelation {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -58,6 +65,8 @@ pub struct StringRelation {
     pub(crate) _timestamp: Option<TimestampFormat>,
     pub(crate) _uid: Option<u32>,
     pub(crate) _user: Option<String>,
+
+    #[builder(default="HashMap::new()")]
     pub(crate) _tags: HashMap<String, String>,
 
     pub(crate) _members: Vec<(char, ObjId, String)>,
