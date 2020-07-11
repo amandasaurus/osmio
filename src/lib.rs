@@ -5,6 +5,7 @@ extern crate protobuf;
 extern crate byteorder;
 extern crate flate2;
 extern crate chrono;
+extern crate quick_xml;
 #[macro_use] extern crate derive_builder;
 
 use std::collections::HashMap;
