@@ -333,7 +333,8 @@ pub enum OSMWriteError {
     AlreadyStarted,
     AlreadyClosed,
     OPLWrite(::std::io::Error),
-    XMLWrite(quick_xml::Error),
+    XMLWriteXMLError(quick_xml::Error),
+    XMLWriteIOError(::std::io::Error),
 }
 impl std::fmt::Display for OSMWriteError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
