@@ -56,6 +56,17 @@ impl TimestampFormat {
     }
 }
 
+impl From<i64> for TimestampFormat {
+    fn from(v: i64) -> Self {
+        TimestampFormat::EpochNunber(v)
+    }
+}
+impl From<u64> for TimestampFormat {
+    fn from(v: u64) -> Self {
+        TimestampFormat::EpochNunber(v as i64)
+    }
+}
+
 impl fmt::Display for TimestampFormat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_iso_string())
