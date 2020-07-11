@@ -260,9 +260,8 @@ impl From<quick_xml::Error> for OSMWriteError {
 impl<W: Write> XMLWriter<W> {
     fn ensure_header(&mut self) -> Result<(), OSMWriteError> {
         if self._state == State::Initial {
-            let mut elem = BytesStart::borrowed_name(b"osm");
+            let mut elem = BytesStart::borrowed_name(b"osmChange");
             elem.push_attribute(("version", "0.6"));
-
             elem.push_attribute(("generator", format!("osmio/{}", version()).as_str()));
 
             self.writer.write_event(Event::Start(elem)).unwrap(); // fixme
