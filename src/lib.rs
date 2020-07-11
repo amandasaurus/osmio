@@ -34,7 +34,7 @@ pub type Lat = f32;
 /// Longitude
 pub type Lon = f32;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum TimestampFormat {
     ISOString(String),
     EpochNunber(i64),
