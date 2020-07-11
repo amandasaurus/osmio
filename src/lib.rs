@@ -58,14 +58,9 @@ impl TimestampFormat {
     }
 }
 
-impl From<i64> for TimestampFormat {
-    fn from(v: i64) -> Self {
-        TimestampFormat::EpochNunber(v)
-    }
-}
-impl From<u64> for TimestampFormat {
-    fn from(v: u64) -> Self {
-        TimestampFormat::EpochNunber(v as i64)
+impl<T> From<T> for TimestampFormat where T: Into<i64> {
+    fn from(v: T) -> Self {
+        TimestampFormat::EpochNunber(v.into())
     }
 }
 
