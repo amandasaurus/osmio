@@ -20,7 +20,7 @@ macro_rules! func_call_inner_set {
     )
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Builder)]
 pub struct StringNode {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
