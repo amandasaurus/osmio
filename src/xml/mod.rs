@@ -3,7 +3,7 @@
 use std::io::{Read, BufReader, Write};
 use super::{OSMReader, OSMWriter, OSMWriteError};
 use super::TimestampFormat;
-use super::{OSMObj, Node, Way, Relation};
+use super::{OSMObj, Node, Way};
 use ::obj_types::{StringNode, StringWay, StringRelation, StringOSMObj};
 use super::version;
 use std::char;
@@ -12,9 +12,7 @@ use super::ObjId;
 use std::iter::Iterator;
 
 use xml_rs::reader::{EventReader, XmlEvent, Events};
-use xml_rs::writer::{EventWriter, Error};
 use xml_rs::attribute::OwnedAttribute;
-use quick_xml::Writer;
 use quick_xml::events::{Event, BytesEnd, BytesStart};
 
 pub struct XMLReader<R: Read>  {
@@ -255,8 +253,8 @@ fn relation_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSM
 
 
 
-impl From<Error> for OSMWriteError {
-    fn from(err: Error) -> OSMWriteError { OSMWriteError::XMLWrite(err) }
+impl From<quick_xml::Error> for OSMWriteError {
+    fn from(err: quick_xml::Error) -> OSMWriteError { OSMWriteError::XMLWrite(err) }
 }
 
 impl<W: Write> XMLWriter<W> {
@@ -264,6 +262,9 @@ impl<W: Write> XMLWriter<W> {
         if self._state == State::Initial {
             let mut elem = BytesStart::borrowed_name(b"osm");
             elem.push_attribute(("version", "0.6"));
+
+            elem.push_attribute(("generator", format!("osmio/{}", version()).as_str()));
+
             self.writer.write_event(Event::Start(elem)).unwrap(); // fixme
             self._state = State::WritingObjects;
         }
@@ -284,12 +285,14 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         self._state != State::Closed
     }
 
-    fn close(&mut self) {
-        self.ensure_header().unwrap();
+    fn close(&mut self) -> Result<(), OSMWriteError> {
+        self.ensure_header()?;
 
-        self.writer.write_event(Event::End(BytesEnd::borrowed(b"osm")));
+        self.writer.write_event(Event::End(BytesEnd::borrowed(b"osm")))?;
 
         self._state = State::Closed;
+
+        Ok(())
     }
 
     fn write_obj(&mut self, obj: &impl OSMObj) -> Result<(), OSMWriteError> {
@@ -316,14 +319,14 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
 
         }
 
-        self.writer.write_event(Event::Start(xml_el));
+        self.writer.write_event(Event::Start(xml_el))?;
 
         let mut nd_el;
         if let Some(way) = obj.as_way() {
             for nid in way.nodes() {
                 nd_el = BytesStart::borrowed_name(b"nd");
                 nd_el.push_attribute(("ref", nid.to_string().as_str()));
-                self.writer.write_event(Event::Empty(nd_el));
+                self.writer.write_event(Event::Empty(nd_el))?;
             }
         }
 
@@ -336,9 +339,9 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             tag_el = BytesStart::borrowed_name(b"tag");
             tag_el.push_attribute(("k", k));
             tag_el.push_attribute(("v", v));
-            self.writer.write_event(Event::Empty(tag_el));
+            self.writer.write_event(Event::Empty(tag_el))?;
         }
-        self.writer.write_event(Event::End(BytesEnd::borrowed(tag_name.as_bytes())));
+        self.writer.write_event(Event::End(BytesEnd::borrowed(tag_name.as_bytes())))?;
 
         Ok(())
     }
@@ -351,6 +354,6 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
 
 impl<W: Write> Drop for XMLWriter<W> {
     fn drop(&mut self) {
-        self.close();
+        self.close().unwrap();
     }
 }

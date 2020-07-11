@@ -291,8 +291,7 @@ impl<'a, R> Iterator for OSMObjectIterator<'a, R>  where R: OSMReader {
 pub enum OSMWriteError {
     AlreadyClosed,
     OPLWrite(::std::io::Error),
-    XMLWrite(xml_rs::writer::Error),
-
+    XMLWrite(quick_xml::Error),
 }
 
 /// A generic writer for OSM objects.
@@ -306,7 +305,7 @@ pub trait OSMWriter<W: Write> {
     /// tag.
     /// After calling this method, you cannot add any more OSM objects to this writer, and
     /// `is_open` will return `false`.
-    fn close(&mut self);
+    fn close(&mut self) -> Result<(), OSMWriteError>;
 
     /// Return true iff this writer is closed.
     /// If open you should be able to continue to write objects to it. if closed you cannot write
@@ -328,7 +327,7 @@ pub trait OSMWriter<W: Write> {
         for obj in iter {
             writer.write_obj(&obj).unwrap();
         }
-        writer.close();
+        writer.close().unwrap();
 
         writer
     }
