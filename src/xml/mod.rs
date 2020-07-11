@@ -323,8 +323,7 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             for nid in way.nodes() {
                 nd_el = BytesStart::borrowed_name(b"nd");
                 nd_el.push_attribute(("ref", nid.to_string().as_str()));
-                self.writer.write_event(Event::Start(nd_el));
-                self.writer.write_event(Event::End(BytesEnd::borrowed(b"nd")));
+                self.writer.write_event(Event::Empty(nd_el));
             }
         }
 
@@ -337,8 +336,7 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             tag_el = BytesStart::borrowed_name(b"tag");
             tag_el.push_attribute(("k", k));
             tag_el.push_attribute(("v", v));
-            self.writer.write_event(Event::Start(tag_el));
-            self.writer.write_event(Event::End(BytesEnd::borrowed(b"tag")));
+            self.writer.write_event(Event::Empty(tag_el));
         }
         self.writer.write_event(Event::End(BytesEnd::borrowed(tag_name.as_bytes())));
 
