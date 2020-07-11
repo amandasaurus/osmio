@@ -20,7 +20,7 @@ macro_rules! func_call_inner_set {
     )
 }
 
-#[derive(PartialEq, Debug, Builder)]
+#[derive(PartialEq, Debug, Builder, Clone)]
 #[builder(setter(strip_option))]
 pub struct StringNode {
     pub(crate) _id: ObjId,
@@ -28,51 +28,70 @@ pub struct StringNode {
 
     #[builder(default="false")]
     pub(crate) _deleted: bool,
+    #[builder(default="None")]
     pub(crate) _changeset_id: Option<u32>,
+    #[builder(default="None")]
     pub(crate) _timestamp: Option<TimestampFormat>,
+    #[builder(default="None")]
     pub(crate) _uid: Option<u32>,
+    #[builder(default="None")]
     pub(crate) _user: Option<String>,
 
     #[builder(default="HashMap::new()")]
     pub(crate) _tags: HashMap<String, String>,
 
+    #[builder(default="None")]
     pub(crate) _lat_lon: Option<(Lat, Lon)>,
 }
 
 
-#[derive(PartialEq, Debug, Builder)]
+#[derive(PartialEq, Debug, Builder, Clone)]
+#[builder(setter(strip_option))]
 pub struct StringWay {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
+    #[builder(default="false")]
     pub(crate) _deleted: bool,
+    #[builder(default="None")]
     pub(crate) _changeset_id: Option<u32>,
+    #[builder(default="None")]
     pub(crate) _timestamp: Option<TimestampFormat>,
+    #[builder(default="None")]
     pub(crate) _uid: Option<u32>,
+    #[builder(default="None")]
     pub(crate) _user: Option<String>,
 
     #[builder(default="HashMap::new()")]
     pub(crate) _tags: HashMap<String, String>,
 
+    #[builder(default="Vec::new()")]
     pub(crate) _nodes: Vec<ObjId>,
 }
 
-#[derive(PartialEq, Debug, Builder)]
+#[derive(PartialEq, Debug, Builder, Clone)]
+#[builder(setter(strip_option))]
 pub struct StringRelation {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
+    #[builder(default="false")]
     pub(crate) _deleted: bool,
+    #[builder(default="None")]
     pub(crate) _changeset_id: Option<u32>,
+    #[builder(default="None")]
     pub(crate) _timestamp: Option<TimestampFormat>,
+    #[builder(default="None")]
     pub(crate) _uid: Option<u32>,
+    #[builder(default="None")]
     pub(crate) _user: Option<String>,
 
     #[builder(default="HashMap::new()")]
     pub(crate) _tags: HashMap<String, String>,
 
-    pub(crate) _members: Vec<(char, ObjId, String)>,
+    #[builder(default="Vec::new()")]
+    pub(crate) _members: Vec<(OSMObjectType, ObjId, String)>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum StringOSMObj {
     Node(StringNode),
     Way(StringWay),
@@ -107,7 +126,6 @@ impl OSMObjBase for StringOSMObj {
     fn set_timestamp(&mut self, val: impl Into<Option<TimestampFormat>>) { func_call_inner_set!(self, set_timestamp, val); }
     fn set_uid(&mut self, val: impl Into<Option<u32>>) { func_call_inner_set!(self, set_uid, val); }
     fn set_user(&mut self, val: impl Into<Option<String>>) { func_call_inner_set!(self, set_user, val); }
-
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
@@ -230,7 +248,6 @@ impl OSMObjBase for StringNode {
     fn set_uid(&mut self, val: impl Into<Option<u32>>) { self._uid = val.into(); }
     fn set_user(&mut self, val: impl Into<Option<String>>) { self._user = val.into(); }
 
-
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
         Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
@@ -248,6 +265,7 @@ impl OSMObjBase for StringNode {
     fn unset_tag(&mut self, key: impl AsRef<str>) {
         self._tags.remove(key.as_ref());
     }
+
 }
 
 impl Node for StringNode {
@@ -363,11 +381,6 @@ impl OSMObjBase for StringRelation {
 
 impl Relation for StringRelation {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a> {
-        Box::new(self._members.iter().map(|(c, o, r)| (
-                match c { 'n'=> OSMObjectType::Node, 'w'=>OSMObjectType::Way, 'r'=>OSMObjectType::Relation, _ => unreachable!() },
-                o.clone(),
-                r.as_ref(),
-                )
-        ))
+        Box::new(self._members.iter().map(|(t, i, r)| (*t, *i, r.as_str())))
     }
 }

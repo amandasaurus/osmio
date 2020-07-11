@@ -2,7 +2,7 @@
 
 use std::io::{Read, BufReader, Write};
 use super::{OSMReader, OSMWriter, OSMWriteError};
-use super::{OSMObj, Node, Way};
+use super::{OSMObj, Node, Way, Relation};
 use ::obj_types::StringOSMObj;
 use std::iter::Iterator;
 use super::version;
@@ -10,7 +10,7 @@ use super::version;
 use ::xml::xml_elements_to_osm_obj;
 
 use xml_rs::reader::{EventReader, XmlEvent, Events};
-use quick_xml::events::{Event, BytesEnd, BytesStart};
+use quick_xml::events::{Event, BytesEnd, BytesStart, BytesDecl};
 
 pub struct OSCReader<R: Read>  {
     parser: Events<BufReader<R>>,
@@ -42,7 +42,7 @@ impl<R: Read> OSMReader for OSCReader<R> {
     }
 
     fn inner(&self) -> &R {
-        unimplemented!()
+        todo!("{} {} OSCReader inner()", file!(), line!());
     }
 
     fn next(&mut self) -> Option<StringOSMObj> {
@@ -96,6 +96,7 @@ impl<R: Read> OSMReader for OSCReader<R> {
 impl<W: Write> OSCWriter<W> {
     fn ensure_header(&mut self) -> Result<(), OSMWriteError> {
         if self._state == State::Initial {
+            self.writer.write_event(Event::Decl(BytesDecl::new(b"1.0", Some(b"utf-8"), None))).unwrap(); // fixme
             let mut elem = BytesStart::borrowed_name(b"osmChange");
             elem.push_attribute(("version", "0.6"));
 
@@ -149,15 +150,24 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
         xml_el.push_attribute(("id", obj.id().to_string().as_ref()));
         xml_el.push_attribute(("visible", if obj.deleted() { "false" } else { "true" }));
         xml_el.push_attribute(("version", obj.version().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("user", obj.user().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("uid", obj.uid().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("changeset", obj.changeset_id().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("timestamp", obj.timestamp().as_ref().unwrap().to_string().as_ref()));
+        if let Some(user) = obj.user() {
+            xml_el.push_attribute((b"user".as_ref(), user.as_ref()));
+        }
+        if let Some(uid) = obj.uid() {
+            xml_el.push_attribute((b"uid".as_ref(), uid.to_string().as_ref()));
+        }
+        if let Some(changeset_id) = obj.changeset_id() {
+            xml_el.push_attribute((b"changeset".as_ref(), changeset_id.to_string().as_ref()));
+        }
+        if let Some(timestamp) = obj.timestamp() {
+            xml_el.push_attribute((b"timestamp".as_ref(), timestamp.to_string().as_ref()));
+        }
 
         if let Some(node) = obj.as_node() {
-            xml_el.push_attribute(("lat", node.lat_lon().unwrap().0.to_string().as_str()));
-            xml_el.push_attribute(("lon", node.lat_lon().unwrap().1.to_string().as_str()));
-
+            if let Some(lat_lon) = node.lat_lon() {
+                xml_el.push_attribute(("lat", lat_lon.0.to_string().as_str()));
+                xml_el.push_attribute(("lon", lat_lon.1.to_string().as_str()));
+            }
         }
 
         self.writer.write_event(Event::Start(xml_el))?;
@@ -171,8 +181,15 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
             }
         }
 
-        if let Some(_relation) = obj.as_relation() {
-            unimplemented!();
+        let mut member_el;
+        if let Some(relation) = obj.as_relation() {
+            for (obj_type, id, role) in relation.members() {
+                member_el = BytesStart::borrowed_name(b"member");
+                member_el.push_attribute(("type", format!("{}", obj_type).as_str()));
+                member_el.push_attribute(("ref", id.to_string().as_str()));
+                member_el.push_attribute(("role", role));
+                self.writer.write_event(Event::Empty(member_el))?;
+            }
         }
 
         let mut tag_el;
@@ -188,7 +205,7 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
     }
 
     fn into_inner(self) -> W {
-        unimplemented!();
+        todo!("{} {}  OSCWriter into_inner", file!(), line!());
         //self.writer.into_inner()
     }
 }

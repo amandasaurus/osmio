@@ -13,6 +13,7 @@ use std::io::{Read, Write};
 use std::iter::{Iterator, ExactSizeIterator};
 use std::fmt;
 use std::fmt::Debug;
+use std::convert::TryFrom;
 use utils::{epoch_to_iso, iso_to_epoch};
 
 #[macro_use]
@@ -26,6 +27,9 @@ pub mod pbf;
 pub mod osc;
 
 pub mod obj_types;
+
+#[cfg(test)]
+mod tests;
 
 /// OSM id of object
 pub type ObjId = i64;
@@ -61,6 +65,15 @@ impl TimestampFormat {
 impl<T> From<T> for TimestampFormat where T: Into<i64> {
     fn from(v: T) -> Self {
         TimestampFormat::EpochNunber(v.into())
+    }
+}
+
+impl std::str::FromStr for TimestampFormat {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let date: i64 = chrono::DateTime::parse_from_rfc3339(s).map_err(|_| "invalid date")?.timestamp();
+        Ok(TimestampFormat::EpochNunber(date))
     }
 }
 
@@ -109,6 +122,12 @@ pub trait OSMObjBase: PartialEq+Debug {
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>);
     fn unset_tag(&mut self, key: impl AsRef<str>);
 
+    fn strip_metadata(&mut self) {
+        self.set_uid(None);
+        self.set_user(None);
+        self.set_changeset_id(None);
+    }
+
 }
 
 /// A Node
@@ -133,7 +152,7 @@ pub trait Relation: OSMObjBase {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
 }
 
-#[derive(Clone,PartialEq,Eq,PartialOrd,Ord)]
+#[derive(Clone,Copy,PartialEq,Eq,PartialOrd,Ord)]
 pub enum OSMObjectType {
     Node,
     Way,
@@ -175,7 +194,33 @@ impl std::fmt::Display for OSMObjectType {
 
 }
 
-// TODO FromStr & Display
+
+impl TryFrom<char> for OSMObjectType {
+    type Error = String;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            'n' => Ok(OSMObjectType::Node),
+            'w' => Ok(OSMObjectType::Way),
+            'r' => Ok(OSMObjectType::Relation),
+            _ => Err(format!("Cannot convert {} to OSMObjectType", c)),
+        }
+    }
+}
+
+impl std::str::FromStr for OSMObjectType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "n" | "node" => Ok(OSMObjectType::Node),
+            "w" | "way" => Ok(OSMObjectType::Way),
+            "r" | "relation" | "rel" => Ok(OSMObjectType::Relation),
+            _ => Err(format!("Cannot convert {} to OSMObjectType", s)),
+        }
+
+    }
+}
 
 
 pub trait OSMObj: OSMObjBase {
@@ -281,13 +326,21 @@ impl<'a, R> Iterator for OSMObjectIterator<'a, R>  where R: OSMReader {
 }
 
 
-/// An error when trying to read from an OSMReader
+/// An error when trying to write from an OSMWriter
 #[derive(Debug)]
 pub enum OSMWriteError {
+    FormatDoesntSupportHeaders,
+    AlreadyStarted,
     AlreadyClosed,
     OPLWrite(::std::io::Error),
     XMLWrite(quick_xml::Error),
 }
+impl std::fmt::Display for OSMWriteError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+impl std::error::Error for OSMWriteError {}
 
 /// A generic writer for OSM objects.
 pub trait OSMWriter<W: Write> {
@@ -312,6 +365,10 @@ pub trait OSMWriter<W: Write> {
 
     /// Convert back to the underlying writer object
     fn into_inner(self) -> W;
+
+    fn set_header(&mut self, _key_value: (&str, &str)) -> Result<(), OSMWriteError> {
+        todo!("set_header not done yet")
+    }
 
     /// Create a new OSMWriter, consume all the objects from an OSMObj iterator source, and then
     /// close this source. Returns this OSMWriter.

@@ -3,17 +3,16 @@
 use std::io::{Read, BufReader, Write};
 use super::{OSMReader, OSMWriter, OSMWriteError};
 use super::TimestampFormat;
-use super::{OSMObj, Node, Way};
+use super::{OSMObj, OSMObjectType, Node, Way, Relation};
 use ::obj_types::{StringNode, StringWay, StringRelation, StringOSMObj};
 use super::version;
-use std::char;
 use std::collections::HashMap;
 use super::ObjId;
 use std::iter::Iterator;
 
 use xml_rs::reader::{EventReader, XmlEvent, Events};
 use xml_rs::attribute::OwnedAttribute;
-use quick_xml::events::{Event, BytesEnd, BytesStart};
+use quick_xml::events::{Event, BytesEnd, BytesStart, BytesDecl};
 
 pub struct XMLReader<R: Read>  {
     parser: Events<BufReader<R>>,
@@ -32,7 +31,7 @@ impl<R: Read> OSMReader for XMLReader<R> {
     }
 
     fn inner(&self) -> &R {
-        unimplemented!()
+        todo!("{} {} XMLReader inner()", file!(), line!());
     }
 
     fn next(&mut self) -> Option<StringOSMObj> {
@@ -93,6 +92,7 @@ enum State {
 /// Write as OSM XML file format
 pub struct XMLWriter<W: Write>  {
     writer: quick_xml::Writer<W>,
+    headers: HashMap<String, String>,
     _state: State,
 }
 
@@ -155,20 +155,14 @@ fn get_nodes(els: &mut Vec<XmlEvent>) -> Vec<ObjId> {
     result
 }
 
-fn get_members(els: &mut Vec<XmlEvent>) -> Vec<(char, ObjId, String)> {
+fn get_members(els: &mut Vec<XmlEvent>) -> Vec<(OSMObjectType, ObjId, String)> {
     let mut result = Vec::new();
 
     for el in els.iter_mut() {
         if let &mut XmlEvent::StartElement{ ref name, ref mut attributes, ..} = el {
             if name.local_name == "member" {
                 let ref_id_o: Option<ObjId> = get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
-                let member_type_o: Option<char> = get_xml_attribute(attributes, "type")
-                    .and_then(|t| match t.as_ref() {
-                        "node" => Some('n'),
-                        "way" => Some('w'),
-                        "relation" => Some('r'),
-                        _ => { None },
-                    });
+                let member_type_o: Option<OSMObjectType> = get_xml_attribute(attributes, "type").and_then(|t| t.parse().ok());
                 let role = get_xml_attribute(attributes, "role").unwrap_or_else(|| String::new());
                 if let (Some(ref_id), Some(member_type)) = (ref_id_o, member_type_o) {
                     result.push((member_type, ref_id, role));
@@ -260,9 +254,14 @@ impl From<quick_xml::Error> for OSMWriteError {
 impl<W: Write> XMLWriter<W> {
     fn ensure_header(&mut self) -> Result<(), OSMWriteError> {
         if self._state == State::Initial {
-            let mut elem = BytesStart::borrowed_name(b"osmChange");
+            self.writer.write_event(Event::Decl(BytesDecl::new(b"1.0", Some(b"utf-8"), None))).unwrap(); // fixme
+            let mut elem = BytesStart::borrowed_name(b"osm");
             elem.push_attribute(("version", "0.6"));
             elem.push_attribute(("generator", format!("osmio/{}", version()).as_str()));
+
+            for (k, v) in self.headers.iter() {
+                elem.push_attribute((k.as_str(), v.as_str()));
+            }
 
             self.writer.write_event(Event::Start(elem)).unwrap(); // fixme
             self._state = State::WritingObjects;
@@ -276,7 +275,19 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         // TODO have a config that does indentation and stuff 
         XMLWriter {
             writer: quick_xml::Writer::new_with_indent(writer, '\t' as u8, 1),
+            headers: HashMap::new(),
             _state: State::Initial,
+        }
+    }
+
+    fn set_header(&mut self, (key, value): (&str, &str)) -> Result<(), OSMWriteError> {
+        match self._state {
+            State::Initial => {
+                self.headers.insert(key.into(), value.into());
+                Ok(())
+            },
+            State::Closed => Err(OSMWriteError::AlreadyClosed),
+            _ => Err(OSMWriteError::AlreadyStarted),
         }
     }
 
@@ -294,6 +305,7 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         Ok(())
     }
 
+
     fn write_obj(&mut self, obj: &impl OSMObj) -> Result<(), OSMWriteError> {
 
         match self._state {
@@ -302,51 +314,79 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             State::Closed => return Err(OSMWriteError::AlreadyClosed),
         }
 
-        let tag_name = format!("{}", obj.object_type());
-        let mut xml_el = BytesStart::borrowed_name(tag_name.as_bytes());
-        xml_el.push_attribute(("id", obj.id().to_string().as_ref()));
-        xml_el.push_attribute(("visible", if obj.deleted() { "false" } else { "true" }));
-        xml_el.push_attribute(("version", obj.version().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("user", obj.user().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("uid", obj.uid().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("changeset", obj.changeset_id().unwrap().to_string().as_ref()));
-        xml_el.push_attribute(("timestamp", obj.timestamp().as_ref().unwrap().to_string().as_ref()));
+        let tag_name = match obj.object_type() {
+            OSMObjectType::Node => b"node".as_ref(),
+            OSMObjectType::Way => b"way".as_ref(),
+            OSMObjectType::Relation => b"relation".as_ref(),
+        };
+        let mut xml_el = BytesStart::borrowed_name(tag_name);
+        xml_el.push_attribute((b"id".as_ref(), obj.id().to_string().as_ref()));
+        xml_el.push_attribute((b"visible".as_ref(), if obj.deleted() { b"false".as_ref() } else { b"true".as_ref() }));
+        xml_el.push_attribute((b"version".as_ref(), obj.version().unwrap().to_string().as_ref()));
+        if let Some(user) = obj.user() {
+            xml_el.push_attribute((b"user".as_ref(), user.as_ref()));
+        }
+        if let Some(uid) = obj.uid() {
+            xml_el.push_attribute((b"uid".as_ref(), uid.to_string().as_ref()));
+        }
+        if let Some(changeset_id) = obj.changeset_id() {
+            xml_el.push_attribute((b"changeset".as_ref(), changeset_id.to_string().as_ref()));
+        }
+        if let Some(timestamp) = obj.timestamp() {
+            xml_el.push_attribute((b"timestamp".as_ref(), timestamp.to_string().as_ref()));
+        }
 
         if let Some(node) = obj.as_node() {
-            xml_el.push_attribute(("lat", node.lat_lon().unwrap().0.to_string().as_str()));
-            xml_el.push_attribute(("lon", node.lat_lon().unwrap().1.to_string().as_str()));
+            if let Some(lat_lon) = node.lat_lon() {
+                xml_el.push_attribute((b"lat".as_ref(), lat_lon.0.to_string().as_str().as_ref()));
+                xml_el.push_attribute((b"lon".as_ref(), lat_lon.1.to_string().as_str().as_ref()));
+            }
 
         }
 
-        self.writer.write_event(Event::Start(xml_el))?;
+        if obj.is_node() && obj.untagged() {
+            self.writer.write_event(Event::Empty(xml_el))?;
+            return Ok(());
+        } else {
+            self.writer.write_event(Event::Start(xml_el))?;
+        }
 
         let mut nd_el;
         if let Some(way) = obj.as_way() {
             for nid in way.nodes() {
-                nd_el = BytesStart::borrowed_name(b"nd");
-                nd_el.push_attribute(("ref", nid.to_string().as_str()));
+                nd_el = BytesStart::borrowed_name(b"nd".as_ref());
+                nd_el.push_attribute((b"ref".as_ref(), nid.to_string().as_str().as_ref()));
                 self.writer.write_event(Event::Empty(nd_el))?;
             }
         }
 
-        if let Some(_relation) = obj.as_relation() {
-            unimplemented!();
+        let mut el;
+        if let Some(relation) = obj.as_relation() {
+            for member in relation.members() {
+                el = BytesStart::borrowed_name(b"member".as_ref());
+                el.push_attribute(("type", member.0.to_string().as_str()));
+                el.push_attribute(("ref", member.1.to_string().as_str()));
+                if !member.2.is_empty() {
+                    el.push_attribute(("role", member.2.to_string().as_str()));
+                }
+                self.writer.write_event(Event::Empty(el))?;
+            }
         }
 
         let mut tag_el;
         for (k, v) in obj.tags() {
-            tag_el = BytesStart::borrowed_name(b"tag");
+            tag_el = BytesStart::borrowed_name(b"tag".as_ref());
             tag_el.push_attribute(("k", k));
             tag_el.push_attribute(("v", v));
             self.writer.write_event(Event::Empty(tag_el))?;
         }
-        self.writer.write_event(Event::End(BytesEnd::borrowed(tag_name.as_bytes())))?;
+        self.writer.write_event(Event::End(BytesEnd::borrowed(tag_name)))?;
 
         Ok(())
     }
 
     fn into_inner(self) -> W {
-        unimplemented!();
+        todo!("converting an XMLWriter into_inner");
         //self.writer.into_inner()
     }
 }
