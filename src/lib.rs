@@ -164,11 +164,13 @@ pub trait Way: OSMObjBase {
     fn nodes(&self) -> &[ObjId];
     fn num_nodes(&self) -> usize;
     fn node(&self, idx: usize) -> Option<ObjId>;
+    fn set_nodes(&mut self, nodes: impl IntoIterator<Item=impl Into<ObjId>>);
 }
 
 /// A Relation
 pub trait Relation: OSMObjBase {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
+    fn set_members(&mut self, members: impl IntoIterator<Item=(OSMObjectType, ObjId, impl Into<String>)>);
 }
 
 #[derive(Clone,Copy,PartialEq,Eq,PartialOrd,Ord)]

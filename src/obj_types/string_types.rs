@@ -332,6 +332,10 @@ impl Way for StringWay {
     fn node(&self, idx: usize) -> Option<ObjId> {
         self._nodes.get(idx).cloned()
     }
+    fn set_nodes(&mut self, nodes: impl IntoIterator<Item=impl Into<ObjId>>) {
+        self._nodes.truncate(0);
+        self._nodes.extend(nodes.into_iter().map(|i| i.into()));
+    }
 }
 
 impl OSMObjBase for StringRelation {
@@ -382,5 +386,10 @@ impl OSMObjBase for StringRelation {
 impl Relation for StringRelation {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a> {
         Box::new(self._members.iter().map(|(t, i, r)| (*t, *i, r.as_str())))
+    }
+
+    fn set_members(&mut self, members: impl IntoIterator<Item=(OSMObjectType, ObjId, impl Into<String>)>) {
+        self._members.truncate(0);
+        self._members.extend(members.into_iter().map(|(t, i, r)| (t, i, r.into())))
     }
 }
