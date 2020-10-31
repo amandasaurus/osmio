@@ -1,19 +1,20 @@
 //! Read and write OpenStreetMap fileformats
 //!
-extern crate xml as xml_rs;
-extern crate protobuf;
 extern crate byteorder;
-extern crate flate2;
 extern crate chrono;
+extern crate flate2;
+extern crate protobuf;
 extern crate quick_xml;
-#[macro_use] extern crate derive_builder;
+extern crate xml as xml_rs;
+#[macro_use]
+extern crate derive_builder;
 
 use std::collections::HashMap;
-use std::io::{Read, Write};
-use std::iter::{Iterator, ExactSizeIterator};
+use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::Debug;
-use std::convert::TryFrom;
+use std::io::{Read, Write};
+use std::iter::{ExactSizeIterator, Iterator};
 use utils::{epoch_to_iso, iso_to_epoch};
 
 #[macro_use]
@@ -21,8 +22,8 @@ pub mod utils;
 
 pub mod nodestore;
 
-pub mod xml;
 pub mod pbf;
+pub mod xml;
 //pub mod opl;
 pub mod osc;
 
@@ -62,7 +63,10 @@ impl TimestampFormat {
     }
 }
 
-impl<T> From<T> for TimestampFormat where T: Into<i64> {
+impl<T> From<T> for TimestampFormat
+where
+    T: Into<i64>,
+{
     fn from(v: T) -> Self {
         TimestampFormat::EpochNunber(v.into())
     }
@@ -72,7 +76,9 @@ impl std::str::FromStr for TimestampFormat {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let date: i64 = chrono::DateTime::parse_from_rfc3339(s).map_err(|_| "invalid date")?.timestamp();
+        let date: i64 = chrono::DateTime::parse_from_rfc3339(s)
+            .map_err(|_| "invalid date")?
+            .timestamp();
         Ok(TimestampFormat::EpochNunber(date))
     }
 }
@@ -103,8 +109,7 @@ impl std::cmp::PartialEq for TimestampFormat {
 }
 
 /// The basic metadata fields all OSM objects share
-pub trait OSMObjBase: PartialEq+Debug {
-
+pub trait OSMObjBase: PartialEq + Debug {
     fn id(&self) -> ObjId;
     fn set_id(&mut self, val: impl Into<ObjId>);
     fn version(&self) -> Option<u32>;
@@ -120,7 +125,7 @@ pub trait OSMObjBase: PartialEq+Debug {
     fn user(&self) -> Option<&str>;
     fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>);
 
-    fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>;
+    fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a>;
     fn tag(&self, key: impl AsRef<str>) -> Option<&str>;
     fn has_tag(&self, key: impl AsRef<str>) -> bool {
         self.tag(key).is_some()
@@ -146,7 +151,6 @@ pub trait OSMObjBase: PartialEq+Debug {
         self.set_user(None);
         self.set_changeset_id(None);
     }
-
 }
 
 /// A Node
@@ -164,16 +168,21 @@ pub trait Way: OSMObjBase {
     fn nodes(&self) -> &[ObjId];
     fn num_nodes(&self) -> usize;
     fn node(&self, idx: usize) -> Option<ObjId>;
-    fn set_nodes(&mut self, nodes: impl IntoIterator<Item=impl Into<ObjId>>);
+    fn set_nodes(&mut self, nodes: impl IntoIterator<Item = impl Into<ObjId>>);
 }
 
 /// A Relation
 pub trait Relation: OSMObjBase {
-    fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a>;
-    fn set_members(&mut self, members: impl IntoIterator<Item=(OSMObjectType, ObjId, impl Into<String>)>);
+    fn members<'a>(
+        &'a self,
+    ) -> Box<dyn ExactSizeIterator<Item = (OSMObjectType, ObjId, &'a str)> + 'a>;
+    fn set_members(
+        &mut self,
+        members: impl IntoIterator<Item = (OSMObjectType, ObjId, impl Into<String>)>,
+    );
 }
 
-#[derive(Clone,Copy,PartialEq,Eq,PartialOrd,Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OSMObjectType {
     Node,
     Way,
@@ -183,38 +192,22 @@ pub enum OSMObjectType {
 impl std::fmt::Debug for OSMObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            OSMObjectType::Node => {
-                write!(f, "n")
-            },
-            OSMObjectType::Way => {
-                write!(f, "w")
-            },
-            OSMObjectType::Relation => {
-                write!(f, "r")
-            },
+            OSMObjectType::Node => write!(f, "n"),
+            OSMObjectType::Way => write!(f, "w"),
+            OSMObjectType::Relation => write!(f, "r"),
         }
     }
-
 }
-
 
 impl std::fmt::Display for OSMObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            OSMObjectType::Node => {
-                write!(f, "node")
-            },
-            OSMObjectType::Way => {
-                write!(f, "way")
-            },
-            OSMObjectType::Relation => {
-                write!(f, "relation")
-            },
+            OSMObjectType::Node => write!(f, "node"),
+            OSMObjectType::Way => write!(f, "way"),
+            OSMObjectType::Relation => write!(f, "relation"),
         }
     }
-
 }
-
 
 impl TryFrom<char> for OSMObjectType {
     type Error = String;
@@ -239,10 +232,8 @@ impl std::str::FromStr for OSMObjectType {
             "r" | "relation" | "rel" => Ok(OSMObjectType::Relation),
             _ => Err(format!("Cannot convert {} to OSMObjectType", s)),
         }
-
     }
 }
-
 
 pub trait OSMObj: OSMObjBase {
     type Node: Node;
@@ -283,7 +274,9 @@ pub trait OSMReader {
 
     #[allow(unused_variables)]
     fn set_sorted_assumption(&mut self, sorted_assumption: bool) {}
-    fn get_sorted_assumption(&mut self) -> bool { false }
+    fn get_sorted_assumption(&mut self) -> bool {
+        false
+    }
 
     fn assume_sorted(&mut self) {
         self.set_sorted_assumption(true);
@@ -291,7 +284,7 @@ pub trait OSMReader {
     fn assume_unsorted(&mut self) {
         self.set_sorted_assumption(false);
     }
-    
+
     /// Conver to the underlying reader
     fn into_inner(self) -> Self::R;
 
@@ -300,9 +293,10 @@ pub trait OSMReader {
     fn next(&mut self) -> Option<Self::Obj>;
 
     fn objects<'a>(&'a mut self) -> OSMObjectIterator<'a, Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
-        OSMObjectIterator{ inner: self }
+        OSMObjectIterator { inner: self }
     }
 
     //fn nodes<'a, N: Node>(&'a mut self) -> Box<dyn Iterator<Item=N>+'a> where Self:Sized {
@@ -328,28 +322,35 @@ pub trait OSMReader {
     //fn relations<'a>(&'a mut self) -> Box<Iterator<Item=Relation>+'a> where Self:Sized {
     //    Box::new(self.objects().filter_map(|o| o.into_relation()))
     //}
-
 }
 
 // FIXME does this have to be public? Can I make it private?
-pub struct OSMObjectIterator<'a, R> where R: OSMReader+'a {
+pub struct OSMObjectIterator<'a, R>
+where
+    R: OSMReader + 'a,
+{
     inner: &'a mut R,
 }
 
-impl<'a, R> OSMObjectIterator<'a, R>  where R: OSMReader {
+impl<'a, R> OSMObjectIterator<'a, R>
+where
+    R: OSMReader,
+{
     pub fn inner(&self) -> &R {
         self.inner
     }
 }
 
-impl<'a, R> Iterator for OSMObjectIterator<'a, R>  where R: OSMReader {
+impl<'a, R> Iterator for OSMObjectIterator<'a, R>
+where
+    R: OSMReader,
+{
     type Item = R::Obj;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next()
     }
 }
-
 
 /// An error when trying to write from an OSMWriter
 #[derive(Debug)]
@@ -398,7 +399,10 @@ pub trait OSMWriter<W: Write> {
 
     /// Create a new OSMWriter, consume all the objects from an OSMObj iterator source, and then
     /// close this source. Returns this OSMWriter.
-    fn from_iter<I: Iterator<Item=impl OSMObj>>(writer: W, iter: I) -> Self where Self: Sized {
+    fn from_iter<I: Iterator<Item = impl OSMObj>>(writer: W, iter: I) -> Self
+    where
+        Self: Sized,
+    {
         let mut writer = Self::new(writer);
 
         // FIXME return the results of these operations?
@@ -410,7 +414,6 @@ pub trait OSMWriter<W: Write> {
         writer
     }
 }
-
 
 /// The version string of this library.
 fn version<'a>() -> &'a str {

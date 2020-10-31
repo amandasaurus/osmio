@@ -1,18 +1,18 @@
 //! PBF/Protobuf file format
+use super::OSMReader;
+use super::ObjId;
+use super::TimestampFormat;
 use byteorder;
 use byteorder::ReadBytesExt;
-use super::OSMReader;
-use super::TimestampFormat;
-use std::rc::Rc;
-use super::ObjId;
+use std::io::{Cursor, Read};
 use std::iter::Iterator;
-use std::io::{Read, Cursor};
+use std::rc::Rc;
 
 use super::*;
 
 use flate2::read::ZlibDecoder;
 
-use ::obj_types::{RcNode, RcWay, RcRelation, RcOSMObj};
+use obj_types::{RcNode, RcOSMObj, RcRelation, RcWay};
 
 use protobuf;
 mod fileformat;
@@ -41,7 +41,7 @@ fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
 
 impl<R: Read> FileReader<R> {
     pub fn new(reader: R) -> Self {
-        FileReader{ reader: reader }
+        FileReader { reader: reader }
     }
 
     pub fn inner(&self) -> &R {
@@ -59,9 +59,12 @@ impl<R: Read> FileReader<R> {
             let size = self.reader.read_u32::<byteorder::BigEndian>().ok()?;
             let mut header_bytes_vec = vec![0; size as usize];
 
-            self.reader.read_exact(header_bytes_vec.as_mut_slice()).unwrap();
+            self.reader
+                .read_exact(header_bytes_vec.as_mut_slice())
+                .unwrap();
 
-            let blob_header: fileformat::BlobHeader = protobuf::parse_from_bytes(&header_bytes_vec).unwrap();
+            let blob_header: fileformat::BlobHeader =
+                protobuf::parse_from_bytes(&header_bytes_vec).unwrap();
 
             let mut blob_bytes = vec![0; blob_header.get_datasize() as usize];
             self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
@@ -75,15 +78,30 @@ impl<R: Read> FileReader<R> {
 
             return Some(blob);
         }
-
     }
 }
 
-fn decode_nodes(_primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, _stringtable: &Vec<Option<Rc<str>>>, _results: &mut Vec<RcOSMObj>) {
+fn decode_nodes(
+    _primitive_group: &osmformat::PrimitiveGroup,
+    _granularity: i64,
+    _lat_offset: i64,
+    _lon_offset: i64,
+    _date_granularity: i32,
+    _stringtable: &Vec<Option<Rc<str>>>,
+    _results: &mut Vec<RcOSMObj>,
+) {
     unimplemented!("Dense node");
 }
 
-fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
+fn decode_dense_nodes(
+    primitive_group: &osmformat::PrimitiveGroup,
+    granularity: i64,
+    lat_offset: i64,
+    lon_offset: i64,
+    date_granularity: i32,
+    stringtable: &Vec<Option<Rc<str>>>,
+    results: &mut Vec<RcOSMObj>,
+) {
     let dense = primitive_group.get_dense();
     let ids = dense.get_id();
     let lats = dense.get_lat();
@@ -101,7 +119,7 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
     // length
 
     let keys_vals = dense.get_keys_vals();
-    let has_tags = ! keys_vals.is_empty();
+    let has_tags = !keys_vals.is_empty();
 
     let mut keys_vals_index = 0;
 
@@ -115,7 +133,6 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
     let mut last_user_sid = 0;
 
     for index in 0..num_nodes {
-
         // last_* start off 0
         let id = ids[index] + last_id;
         last_id = id;
@@ -129,7 +146,7 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
         let lat = 0.000000001 * (lat as f32);
         let lon = lon_offset + (granularity * lon);
         let lon = 0.000000001 * (lon as f32);
-        
+
         let tags = if !has_tags {
             None
         } else {
@@ -151,13 +168,19 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
 
             Some(
                 tags.iter()
-                .map(|&(kidx, vidx)| (stringtable[kidx as usize].clone(), stringtable[vidx as usize].clone()))
-                .filter_map(|(k, v)|
-                    match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None })
-                .collect()
-                )
+                    .map(|&(kidx, vidx)| {
+                        (
+                            stringtable[kidx as usize].clone(),
+                            stringtable[vidx as usize].clone(),
+                        )
+                    })
+                    .filter_map(|(k, v)| match (k, v) {
+                        (Some(k), Some(v)) => Some((k, v)),
+                        _ => None,
+                    })
+                    .collect(),
+            )
         };
-
 
         let changeset_id = changesets[index] + last_changset;
         last_changset = changeset_id;
@@ -171,34 +194,51 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
         let timestamp = TimestampFormat::EpochNunber(timestamp as i64);
         assert!(uid_id < std::i32::MAX);
 
-        results.push(RcOSMObj::Node(RcNode{
+        results.push(RcOSMObj::Node(RcNode {
             _id: id as ObjId,
             _tags: tags,
             _lat_lon: Some((lat, lon)),
-            _deleted: ! denseinfo.get_visible().get(index).unwrap_or(&true),
+            _deleted: !denseinfo.get_visible().get(index).unwrap_or(&true),
             _changeset_id: Some(changeset_id as u32),
             _uid: Some(uid_id as u32),
             _user: Some(stringtable[user_sid as usize].clone().unwrap()),
             _version: Some(denseinfo.get_version()[index] as u32),
             _timestamp: Some(timestamp),
-
         }));
-
     }
-    
-    // convert the keys_vals to 
+
+    // convert the keys_vals to
 }
 
-fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
+fn decode_ways(
+    primitive_group: &osmformat::PrimitiveGroup,
+    _granularity: i64,
+    _lat_offset: i64,
+    _lon_offset: i64,
+    _date_granularity: i32,
+    stringtable: &Vec<Option<Rc<str>>>,
+    results: &mut Vec<RcOSMObj>,
+) {
     let ways = primitive_group.get_ways();
     results.reserve(ways.len());
     for way in ways {
         let id = way.get_id() as ObjId;
         // TODO check for +itive keys/vals
-        let keys = way.get_keys().into_iter().map(|&idx| stringtable[idx as usize].clone());
-        let vals = way.get_vals().into_iter().map(|&idx| stringtable[idx as usize].clone());
+        let keys = way
+            .get_keys()
+            .into_iter()
+            .map(|&idx| stringtable[idx as usize].clone());
+        let vals = way
+            .get_vals()
+            .into_iter()
+            .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
-        let tags: Vec<_> = tags.filter_map(|(k, v)| match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None }).collect();
+        let tags: Vec<_> = tags
+            .filter_map(|(k, v)| match (k, v) {
+                (Some(k), Some(v)) => Some((k, v)),
+                _ => None,
+            })
+            .collect();
 
         let refs = way.get_refs();
         let mut nodes = Vec::with_capacity(refs.len());
@@ -213,7 +253,7 @@ fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _
         }
 
         // TODO assert all node ids are positive
-        
+
         // TODO could there be *no* info? What should be done there
 
         //println!("from pbf {} last_timestamp {}", way.get_info().get_timestamp(), last_timestamp);
@@ -222,33 +262,59 @@ fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
         let timestamp = TimestampFormat::EpochNunber(way.get_info().get_timestamp());
-        
-        results.push(RcOSMObj::Way(RcWay{
+
+        results.push(RcOSMObj::Way(RcWay {
             _id: id,
             _tags: tags,
             _nodes: nodes,
-            _deleted: ! way.get_info().get_visible(),
+            _deleted: !way.get_info().get_visible(),
             _changeset_id: Some(way.get_info().get_changeset() as u32),
             _uid: Some(way.get_info().get_uid() as u32),
-            _user: Some(stringtable[way.get_info().get_user_sid() as usize].clone().unwrap().clone()),
+            _user: Some(
+                stringtable[way.get_info().get_user_sid() as usize]
+                    .clone()
+                    .unwrap()
+                    .clone(),
+            ),
             _version: Some(way.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
-
         }));
     }
 }
 
-fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
+fn decode_relations(
+    primitive_group: &osmformat::PrimitiveGroup,
+    _granularity: i64,
+    _lat_offset: i64,
+    _lon_offset: i64,
+    _date_granularity: i32,
+    stringtable: &Vec<Option<Rc<str>>>,
+    results: &mut Vec<RcOSMObj>,
+) {
     let _last_timestamp = 0;
     for relation in primitive_group.get_relations() {
         let id = relation.get_id() as ObjId;
         // TODO check for +itive keys/vals
-        let keys = relation.get_keys().into_iter().map(|&idx| stringtable[idx as usize].clone());
-        let vals = relation.get_vals().into_iter().map(|&idx| stringtable[idx as usize].clone());
+        let keys = relation
+            .get_keys()
+            .into_iter()
+            .map(|&idx| stringtable[idx as usize].clone());
+        let vals = relation
+            .get_vals()
+            .into_iter()
+            .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
-        let tags: Vec<_> = tags.filter_map(|(k, v)| match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None }).collect();
+        let tags: Vec<_> = tags
+            .filter_map(|(k, v)| match (k, v) {
+                (Some(k), Some(v)) => Some((k, v)),
+                _ => None,
+            })
+            .collect();
 
-        let roles = relation.get_roles_sid().into_iter().map(|&idx| stringtable[idx as usize].clone());
+        let roles = relation
+            .get_roles_sid()
+            .into_iter()
+            .map(|&idx| stringtable[idx as usize].clone());
 
         let refs = relation.get_memids();
         let mut member_ids = Vec::with_capacity(refs.len());
@@ -264,57 +330,109 @@ fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i
         let _num_members = member_ids.len();
         let member_ids = member_ids.iter();
 
-        let member_types = relation.get_types().iter().map(|t| match *t { osmformat::Relation_MemberType::NODE => OSMObjectType::Node, osmformat::Relation_MemberType::WAY => OSMObjectType::Way, osmformat::Relation_MemberType::RELATION => OSMObjectType::Relation });
+        let member_types = relation.get_types().iter().map(|t| match *t {
+            osmformat::Relation_MemberType::NODE => OSMObjectType::Node,
+            osmformat::Relation_MemberType::WAY => OSMObjectType::Way,
+            osmformat::Relation_MemberType::RELATION => OSMObjectType::Relation,
+        });
 
-        let members: Vec<_> = member_types.zip(member_ids).zip(roles).filter_map(|((t, &id), r_opt)| match r_opt { Some(r) => Some((t, id, r)), None => None }).collect();
-        
+        let members: Vec<_> = member_types
+            .zip(member_ids)
+            .zip(roles)
+            .filter_map(|((t, &id), r_opt)| match r_opt {
+                Some(r) => Some((t, id, r)),
+                None => None,
+            })
+            .collect();
+
         // TODO could there be *no* info? What should be done there
         //let timestamp = relation.get_info().get_timestamp() as i32 + last_timestamp;
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
         let timestamp = TimestampFormat::EpochNunber(relation.get_info().get_timestamp());
-        
-        
-        results.push(RcOSMObj::Relation(RcRelation{
+
+        results.push(RcOSMObj::Relation(RcRelation {
             _id: id,
             _tags: tags,
             _members: members,
-            _deleted: ! relation.get_info().get_visible(),
+            _deleted: !relation.get_info().get_visible(),
             _changeset_id: Some(relation.get_info().get_changeset() as u32),
             _uid: Some(relation.get_info().get_uid() as u32),
-            _user: Some(stringtable[relation.get_info().get_user_sid() as usize].clone().unwrap()),
+            _user: Some(
+                stringtable[relation.get_info().get_user_sid() as usize]
+                    .clone()
+                    .unwrap(),
+            ),
             _version: Some(relation.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
-
         }));
     }
 }
 
-fn decode_primitive_group_to_objs(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, mut results: &mut Vec<RcOSMObj>) {
+fn decode_primitive_group_to_objs(
+    primitive_group: &osmformat::PrimitiveGroup,
+    granularity: i64,
+    lat_offset: i64,
+    lon_offset: i64,
+    date_granularity: i32,
+    stringtable: &Vec<Option<Rc<str>>>,
+    mut results: &mut Vec<RcOSMObj>,
+) {
     let date_granularity = date_granularity / 1000;
-    if ! primitive_group.get_nodes().is_empty() {
-        decode_nodes(primitive_group, granularity, lat_offset, lon_offset, date_granularity, &stringtable, &mut results);
+    if !primitive_group.get_nodes().is_empty() {
+        decode_nodes(
+            primitive_group,
+            granularity,
+            lat_offset,
+            lon_offset,
+            date_granularity,
+            &stringtable,
+            &mut results,
+        );
     } else if primitive_group.has_dense() {
-        decode_dense_nodes(primitive_group, granularity, lat_offset, lon_offset, date_granularity, &stringtable, &mut results);
-    } else if ! primitive_group.get_ways().is_empty() {
-        decode_ways(primitive_group, granularity, lat_offset, lon_offset, date_granularity, &stringtable, &mut results);
-    } else if ! primitive_group.get_relations().is_empty() {
-        decode_relations(primitive_group, granularity, lat_offset, lon_offset, date_granularity, &stringtable, &mut results);
+        decode_dense_nodes(
+            primitive_group,
+            granularity,
+            lat_offset,
+            lon_offset,
+            date_granularity,
+            &stringtable,
+            &mut results,
+        );
+    } else if !primitive_group.get_ways().is_empty() {
+        decode_ways(
+            primitive_group,
+            granularity,
+            lat_offset,
+            lon_offset,
+            date_granularity,
+            &stringtable,
+            &mut results,
+        );
+    } else if !primitive_group.get_relations().is_empty() {
+        decode_relations(
+            primitive_group,
+            granularity,
+            lat_offset,
+            lon_offset,
+            date_granularity,
+            &stringtable,
+            &mut results,
+        );
     } else {
         unreachable!();
     }
 }
 
 fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<RcOSMObj> {
-
-    let stringtable: Vec<Option<Rc<str>>> = block.take_stringtable().take_s()
+    let stringtable: Vec<Option<Rc<str>>> = block
+        .take_stringtable()
+        .take_s()
         .into_iter()
-        .map(|chars|
-           std::str::from_utf8(&chars).ok().map(|s| Rc::from(s))
-        )
+        .map(|chars| std::str::from_utf8(&chars).ok().map(|s| Rc::from(s)))
         .collect();
-    
+
     let granularity = block.get_granularity() as i64;
     let lat_offset = block.get_lat_offset();
     let lon_offset = block.get_lon_offset();
@@ -323,9 +441,16 @@ fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<RcOSMObj> {
     let mut results: Vec<RcOSMObj> = Vec::new();
 
     for primitive_group in block.get_primitivegroup() {
-        decode_primitive_group_to_objs(primitive_group, granularity, lat_offset, lon_offset, date_granularity, &stringtable, &mut results);
+        decode_primitive_group_to_objs(
+            primitive_group,
+            granularity,
+            lat_offset,
+            lon_offset,
+            date_granularity,
+            &stringtable,
+            &mut results,
+        );
     }
-    
 
     results
 }
@@ -336,7 +461,6 @@ impl<R: Read> Iterator for FileReader<R> {
     fn next(&mut self) -> Option<Self::Item> {
         self.get_next_osmdata_blob()
     }
-
 }
 
 pub struct PBFReader<R: Read> {
@@ -350,11 +474,19 @@ impl<R: Read> OSMReader for PBFReader<R> {
     type Obj = RcOSMObj;
 
     fn new(reader: R) -> PBFReader<R> {
-        PBFReader { filereader: FileReader::new(reader), _buffer: Vec::new(), _sorted_assumption: false }
+        PBFReader {
+            filereader: FileReader::new(reader),
+            _buffer: Vec::new(),
+            _sorted_assumption: false,
+        }
     }
 
-    fn set_sorted_assumption(&mut self, sorted_assumption: bool) { self._sorted_assumption = sorted_assumption; }
-    fn get_sorted_assumption(&mut self) -> bool { self._sorted_assumption }
+    fn set_sorted_assumption(&mut self, sorted_assumption: bool) {
+        self._sorted_assumption = sorted_assumption;
+    }
+    fn get_sorted_assumption(&mut self) -> bool {
+        self._sorted_assumption
+    }
 
     fn inner(&self) -> &R {
         self.filereader.inner()
@@ -388,4 +520,3 @@ impl<R: Read> OSMReader for PBFReader<R> {
         self._buffer.pop()
     }
 }
-
