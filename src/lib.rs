@@ -40,7 +40,7 @@ pub type Lat = f32;
 /// Longitude
 pub type Lon = f32;
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Debug, Clone, Eq, Ord)]
 pub enum TimestampFormat {
     ISOString(String),
     EpochNunber(i64),
@@ -80,6 +80,25 @@ impl std::str::FromStr for TimestampFormat {
 impl fmt::Display for TimestampFormat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_iso_string())
+    }
+}
+
+impl std::cmp::PartialOrd for TimestampFormat {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (TimestampFormat::ISOString(a), TimestampFormat::ISOString(b)) => a.partial_cmp(b),
+            (TimestampFormat::EpochNunber(a), TimestampFormat::EpochNunber(b)) => a.partial_cmp(b),
+            (a, b) => a.to_epoch_number().partial_cmp(&b.to_epoch_number()),
+        }
+    }
+}
+impl std::cmp::PartialEq for TimestampFormat {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TimestampFormat::ISOString(a), TimestampFormat::ISOString(b)) => a.eq(b),
+            (TimestampFormat::EpochNunber(a), TimestampFormat::EpochNunber(b)) => a.eq(b),
+            (a, b) => a.to_epoch_number().eq(&b.to_epoch_number()),
+        }
     }
 }
 
