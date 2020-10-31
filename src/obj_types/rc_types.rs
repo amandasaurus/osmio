@@ -62,7 +62,7 @@ pub struct RcRelation {
     pub(crate) _user: Option<Rc<str>>,
     pub(crate) _tags: Vec<(Rc<str>, Rc<str>)>,
 
-    pub(crate) _members: Vec<(char, ObjId, Rc<str>)>,
+    pub(crate) _members: Vec<(OSMObjectType, ObjId, Rc<str>)>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -426,8 +426,8 @@ impl OSMObjBase for RcRelation {
 
 impl Relation for RcRelation {
     fn members<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(OSMObjectType, ObjId, &'a str)>+'a> {
-        Box::new(self._members.iter().map(|(c, o, r)| (
-                match c { 'n'=> OSMObjectType::Node, 'w'=>OSMObjectType::Way, 'r'=>OSMObjectType::Relation, _ => unreachable!() },
+        Box::new(self._members.iter().map(|(t, o, r)| (
+                t.clone(),
                 o.clone(),
                 r.as_ref(),
                 )

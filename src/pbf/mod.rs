@@ -259,7 +259,7 @@ fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i
         let _num_members = member_ids.len();
         let member_ids = member_ids.iter();
 
-        let member_types = relation.get_types().iter().map(|t| match *t { osmformat::Relation_MemberType::NODE => 'n', osmformat::Relation_MemberType::WAY => 'w', osmformat::Relation_MemberType::RELATION => 'r' });
+        let member_types = relation.get_types().iter().map(|t| match *t { osmformat::Relation_MemberType::NODE => OSMObjectType::Node, osmformat::Relation_MemberType::WAY => OSMObjectType::Way, osmformat::Relation_MemberType::RELATION => OSMObjectType::Relation });
 
         let members: Vec<_> = member_types.zip(member_ids).zip(roles).filter_map(|((t, &id), r_opt)| match r_opt { Some(r) => Some((t, id, r)), None => None }).collect();
         
