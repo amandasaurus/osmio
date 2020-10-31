@@ -1,18 +1,18 @@
 //! OSC File format
 
-use std::io::{Read, BufReader, Write};
-use super::{OSMReader, OSMWriter, OSMWriteError};
-use super::{OSMObj, Node, Way, Relation};
-use ::obj_types::StringOSMObj;
-use std::iter::Iterator;
 use super::version;
+use super::{Node, OSMObj, Relation, Way};
+use super::{OSMReader, OSMWriteError, OSMWriter};
+use obj_types::StringOSMObj;
+use std::io::{BufReader, Read, Write};
+use std::iter::Iterator;
 
-use ::xml::xml_elements_to_osm_obj;
+use xml::xml_elements_to_osm_obj;
 
-use xml_rs::reader::{EventReader, XmlEvent, Events};
-use quick_xml::events::{Event, BytesEnd, BytesStart, BytesDecl};
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
+use xml_rs::reader::{EventReader, Events, XmlEvent};
 
-pub struct OSCReader<R: Read>  {
+pub struct OSCReader<R: Read> {
     parser: Events<BufReader<R>>,
 }
 
@@ -23,18 +23,19 @@ enum State {
     Closed,
 }
 
-pub struct OSCWriter<W: Write>  {
+pub struct OSCWriter<W: Write> {
     writer: quick_xml::Writer<W>,
     _state: State,
 }
-
 
 impl<R: Read> OSMReader for OSCReader<R> {
     type R = R;
     type Obj = StringOSMObj;
 
     fn new(reader: R) -> Self {
-        OSCReader { parser: EventReader::new(BufReader::new(reader)).into_iter() }
+        OSCReader {
+            parser: EventReader::new(BufReader::new(reader)).into_iter(),
+        }
     }
 
     fn into_inner(self) -> R {
@@ -52,7 +53,9 @@ impl<R: Read> OSMReader for OSCReader<R> {
         let mut should_push = false;
         loop {
             let el = match self.parser.next() {
-                None => { break; },
+                None => {
+                    break;
+                }
                 Some(e) => e,
             };
 
@@ -60,23 +63,19 @@ impl<R: Read> OSMReader for OSCReader<R> {
 
             let mut should_break = false;
             match el {
-                XmlEvent::StartElement{ref name, ..} => {
-                    match name.local_name.as_str() {
-                        "node"|"way"|"relation" => {
-                            should_push = true;
-                        }
-                        _ => {}
+                XmlEvent::StartElement { ref name, .. } => match name.local_name.as_str() {
+                    "node" | "way" | "relation" => {
+                        should_push = true;
                     }
+                    _ => {}
                 },
-                XmlEvent::EndElement{ref name, ..} => {
-                    match name.local_name.as_str() {
-                        "node"|"way"|"relation" => {
-                            should_break = true;
-                        }
-                        _ => {}
+                XmlEvent::EndElement { ref name, .. } => match name.local_name.as_str() {
+                    "node" | "way" | "relation" => {
+                        should_break = true;
                     }
+                    _ => {}
                 },
-                _ => {},
+                _ => {}
             }
 
             if should_push {
@@ -85,36 +84,35 @@ impl<R: Read> OSMReader for OSCReader<R> {
             if should_break {
                 break;
             }
-
         }
 
         xml_elements_to_osm_obj(&mut elements)
     }
-
 }
 
 impl<W: Write> OSCWriter<W> {
     fn ensure_header(&mut self) -> Result<(), OSMWriteError> {
         if self._state == State::Initial {
-            self.writer.write_event(Event::Decl(BytesDecl::new(b"1.0", Some(b"utf-8"), None))).unwrap(); // fixme
+            self.writer
+                .write_event(Event::Decl(BytesDecl::new(b"1.0", Some(b"utf-8"), None)))
+                .unwrap(); // fixme
             let mut elem = BytesStart::borrowed_name(b"osmChange");
             elem.push_attribute(("version", "0.6"));
 
             elem.push_attribute(("generator", format!("osmio/{}", version()).as_str()));
 
             self.writer.write_event(Event::Start(elem)).unwrap(); // fixme
-            self.writer.write_event(Event::Start(BytesStart::borrowed_name(b"modify")))?;
+            self.writer
+                .write_event(Event::Start(BytesStart::borrowed_name(b"modify")))?;
             self._state = State::WritingObjects;
         }
         Ok(())
     }
 }
 
-
-
 impl<W: Write> OSMWriter<W> for OSCWriter<W> {
     fn new(writer: W) -> Self {
-        // TODO have a config that does indentation and stuff 
+        // TODO have a config that does indentation and stuff
         OSCWriter {
             writer: quick_xml::Writer::new_with_indent(writer, '\t' as u8, 1),
             _state: State::Initial,
@@ -129,8 +127,10 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
         self.ensure_header()?;
 
         if self._state != State::Closed {
-            self.writer.write_event(Event::End(BytesEnd::borrowed(b"modify")))?;
-            self.writer.write_event(Event::End(BytesEnd::borrowed(b"osmChange")))?;
+            self.writer
+                .write_event(Event::End(BytesEnd::borrowed(b"modify")))?;
+            self.writer
+                .write_event(Event::End(BytesEnd::borrowed(b"osmChange")))?;
             self._state = State::Closed;
         }
 
@@ -138,10 +138,9 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
     }
 
     fn write_obj(&mut self, obj: &impl OSMObj) -> Result<(), OSMWriteError> {
-
         match self._state {
-            State::Initial => self.ensure_header()?,    // This will update self._state
-            State::WritingObjects => {},
+            State::Initial => self.ensure_header()?, // This will update self._state
+            State::WritingObjects => {}
             State::Closed => return Err(OSMWriteError::AlreadyClosed),
         }
 
@@ -199,7 +198,8 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
             tag_el.push_attribute(("v", v));
             self.writer.write_event(Event::Empty(tag_el))?;
         }
-        self.writer.write_event(Event::End(BytesEnd::borrowed(tag_name.as_bytes())))?;
+        self.writer
+            .write_event(Event::End(BytesEnd::borrowed(tag_name.as_bytes())))?;
 
         Ok(())
     }

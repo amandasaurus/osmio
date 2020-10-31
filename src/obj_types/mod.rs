@@ -1,18 +1,16 @@
-mod rc_types;
 mod arc_types;
+mod rc_types;
 mod string_types;
 
-use {Node, Way, Relation, OSMObjBase};
+use {Node, OSMObjBase, Relation, Way};
 
-pub use self::rc_types::*;
 pub use self::arc_types::*;
+pub use self::rc_types::*;
 pub use self::string_types::*;
 
 impl From<RcNode> for StringNode {
     fn from(obj: RcNode) -> Self {
-		let mut n = StringNodeBuilder::default()
-		    ._id(obj.id())
-		    .build().unwrap();
+        let mut n = StringNodeBuilder::default()._id(obj.id()).build().unwrap();
 
         n.set_version(obj.version());
         n.set_deleted(obj.deleted());
@@ -32,9 +30,7 @@ impl From<RcNode> for StringNode {
 
 impl From<RcWay> for StringWay {
     fn from(obj: RcWay) -> Self {
-		let mut w = StringWayBuilder::default()
-		    ._id(obj.id())
-		    .build().unwrap();
+        let mut w = StringWayBuilder::default()._id(obj.id()).build().unwrap();
 
         w.set_version(obj.version());
         w.set_deleted(obj.deleted());
@@ -55,9 +51,10 @@ impl From<RcWay> for StringWay {
 
 impl From<RcRelation> for StringRelation {
     fn from(obj: RcRelation) -> Self {
-		let mut r = StringRelationBuilder::default()
-		    ._id(obj.id())
-		    .build().unwrap();
+        let mut r = StringRelationBuilder::default()
+            ._id(obj.id())
+            .build()
+            .unwrap();
 
         r.set_version(obj.version());
         r.set_deleted(obj.deleted());

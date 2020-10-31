@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, offset::Utc};
+use chrono::{offset::Utc, DateTime, NaiveDateTime};
 
 pub fn epoch_to_iso(epoch: i32) -> String {
     // Chrono is a little silly and can't easily convert from epoch to utc timezone
@@ -7,5 +7,7 @@ pub fn epoch_to_iso(epoch: i32) -> String {
 }
 
 pub fn iso_to_epoch(iso: &str) -> u32 {
-    DateTime::parse_from_rfc3339(iso).map(|x| x.timestamp() as u32).unwrap_or(0)
+    DateTime::parse_from_rfc3339(iso)
+        .map(|x| x.timestamp() as u32)
+        .unwrap_or(0)
 }
