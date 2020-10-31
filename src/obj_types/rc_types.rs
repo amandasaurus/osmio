@@ -89,7 +89,7 @@ impl OSMObjBase for RcOSMObj {
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) { func_call_inner_set!(self, set_changeset_id, val); }
     fn set_timestamp(&mut self, val: impl Into<Option<TimestampFormat>>) { func_call_inner_set!(self, set_timestamp, val); }
     fn set_uid(&mut self, val: impl Into<Option<u32>>) { func_call_inner_set!(self, set_uid, val); }
-    fn set_user(&mut self, val: impl Into<Option<String>>) { func_call_inner_set!(self, set_user, val); }
+    fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) { func_call_inner_set!(self, set_user, val); }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
@@ -254,7 +254,9 @@ impl OSMObjBase for RcNode {
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) { self._changeset_id = val.into(); }
     fn set_timestamp(&mut self, val: impl Into<Option<TimestampFormat>>) { self._timestamp = val.into(); }
     fn set_uid(&mut self, val: impl Into<Option<u32>>) { self._uid = val.into(); }
-    fn set_user(&mut self, val: impl Into<Option<String>>) { self._user = val.into().map(|s| Rc::from(s.as_str())); }
+    fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) {
+        self._user = val.into().map(|s| Rc::from(s));
+    }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
@@ -319,7 +321,7 @@ impl OSMObjBase for RcWay {
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) { self._changeset_id = val.into(); }
     fn set_timestamp(&mut self, val: impl Into<Option<TimestampFormat>>) { self._timestamp = val.into(); }
     fn set_uid(&mut self, val: impl Into<Option<u32>>) { self._uid = val.into(); }
-    fn set_user(&mut self, val: impl Into<Option<String>>) { self._user = val.into().map(|s| Rc::from(s.as_str())); }
+    fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) { self._user = val.into().map(|s| Rc::from(s)); }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
@@ -391,7 +393,7 @@ impl OSMObjBase for RcRelation {
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) { self._changeset_id = val.into(); }
     fn set_timestamp(&mut self, val: impl Into<Option<TimestampFormat>>) { self._timestamp = val.into(); }
     fn set_uid(&mut self, val: impl Into<Option<u32>>) { self._uid = val.into(); }
-    fn set_user(&mut self, val: impl Into<Option<String>>) { self._user = val.into().map(|s| Rc::from(s.as_str())); }
+    fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) { self._user = val.into().map(|s| Rc::from(s)); }
 
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>

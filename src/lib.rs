@@ -118,7 +118,7 @@ pub trait OSMObjBase: PartialEq+Debug {
     fn uid(&self) -> Option<u32>;
     fn set_uid(&mut self, val: impl Into<Option<u32>>);
     fn user(&self) -> Option<&str>;
-    fn set_user(&mut self, val: impl Into<Option<String>>);
+    fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>);
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>;
     fn tag(&self, key: impl AsRef<str>) -> Option<&str>;
