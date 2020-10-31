@@ -1,6 +1,6 @@
 [package]
 name = "osmio"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Rory McCann <rory@technomancy.org>"]
 keywords = ["openstreetmap", "osm"]
 license = "AGPL-3.0"
