@@ -375,14 +375,11 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
 
         if let Some(relation) = obj.as_relation() {
             for member in relation.members() {
-                write!(self.writer, "\n\t\t<member type=\"{}\" ref=\"{}\"", member.0, member.1)?;
+                write!(self.writer, "\n\t\t<member type=\"{}\" ref=\"{}\" role=\"", member.0, member.1)?;
                 if !member.2.is_empty() {
-                    write!(self.writer, " role=\"")?;
                     write_xml_escaped(&mut self.writer, member.2)?;
-                    write!(self.writer, "\"/>")?;
-                } else {
-                    write!(self.writer, "/>")?;
                 }
+                write!(self.writer, "\"/>")?;
             }
         }
 
