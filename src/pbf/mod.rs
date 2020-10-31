@@ -3,7 +3,7 @@ use byteorder;
 use byteorder::ReadBytesExt;
 use super::OSMReader;
 use super::TimestampFormat;
-use std::rc::Rc;
+use std::sync::Arc;
 use super::ObjId;
 use std::iter::Iterator;
 use std::io::{Read, Cursor};
@@ -12,7 +12,7 @@ use super::*;
 
 use flate2::read::ZlibDecoder;
 
-use ::obj_types::{RcNode, RcWay, RcRelation, RcOSMObj};
+use ::obj_types::{ArcNode, ArcWay, ArcRelation, ArcOSMObj};
 
 use protobuf;
 mod fileformat;
@@ -79,11 +79,11 @@ impl<R: Read> FileReader<R> {
     }
 }
 
-fn decode_nodes(_primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, _stringtable: &Vec<Option<Rc<str>>>, _results: &mut Vec<RcOSMObj>) {
+fn decode_nodes(_primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, _stringtable: &Vec<Option<Arc<str>>>, _results: &mut Vec<ArcOSMObj>) {
     unimplemented!("Dense node");
 }
 
-fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
+fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Arc<str>>>, results: &mut Vec<ArcOSMObj>) {
     let dense = primitive_group.get_dense();
     let ids = dense.get_id();
     let lats = dense.get_lat();
@@ -171,7 +171,7 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
         let timestamp = TimestampFormat::EpochNunber(timestamp as i64);
         assert!(uid_id < std::i32::MAX);
 
-        results.push(RcOSMObj::Node(RcNode{
+        results.push(ArcOSMObj::Node(ArcNode{
             _id: id as ObjId,
             _tags: tags,
             _lat_lon: Some((lat, lon)),
@@ -189,7 +189,7 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
     // convert the keys_vals to 
 }
 
-fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
+fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Arc<str>>>, results: &mut Vec<ArcOSMObj>) {
     let ways = primitive_group.get_ways();
     results.reserve(ways.len());
     for way in ways {
@@ -223,7 +223,7 @@ fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _
         //let timestamp = epoch_to_iso(timestamp);
         let timestamp = TimestampFormat::EpochNunber(way.get_info().get_timestamp());
         
-        results.push(RcOSMObj::Way(RcWay{
+        results.push(ArcOSMObj::Way(ArcWay{
             _id: id,
             _tags: tags,
             _nodes: nodes,
@@ -238,7 +238,7 @@ fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _
     }
 }
 
-fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
+fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Arc<str>>>, results: &mut Vec<ArcOSMObj>) {
     let _last_timestamp = 0;
     for relation in primitive_group.get_relations() {
         let id = relation.get_id() as ObjId;
@@ -276,7 +276,7 @@ fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i
         let timestamp = TimestampFormat::EpochNunber(relation.get_info().get_timestamp());
         
         
-        results.push(RcOSMObj::Relation(RcRelation{
+        results.push(ArcOSMObj::Relation(ArcRelation{
             _id: id,
             _tags: tags,
             _members: members,
@@ -291,7 +291,7 @@ fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i
     }
 }
 
-fn decode_primitive_group_to_objs(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, mut results: &mut Vec<RcOSMObj>) {
+fn decode_primitive_group_to_objs(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Arc<str>>>, mut results: &mut Vec<ArcOSMObj>) {
     let date_granularity = date_granularity / 1000;
     if ! primitive_group.get_nodes().is_empty() {
         decode_nodes(primitive_group, granularity, lat_offset, lon_offset, date_granularity, &stringtable, &mut results);
@@ -306,12 +306,12 @@ fn decode_primitive_group_to_objs(primitive_group: &osmformat::PrimitiveGroup, g
     }
 }
 
-fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<RcOSMObj> {
+fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<ArcOSMObj> {
 
-    let stringtable: Vec<Option<Rc<str>>> = block.take_stringtable().take_s()
+    let stringtable: Vec<Option<Arc<str>>> = block.take_stringtable().take_s()
         .into_iter()
         .map(|chars|
-           std::str::from_utf8(&chars).ok().map(|s| Rc::from(s))
+           std::str::from_utf8(&chars).ok().map(|s| Arc::from(s))
         )
         .collect();
     
@@ -320,7 +320,7 @@ fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<RcOSMObj> {
     let lon_offset = block.get_lon_offset();
     let date_granularity = block.get_date_granularity();
 
-    let mut results: Vec<RcOSMObj> = Vec::new();
+    let mut results: Vec<ArcOSMObj> = Vec::new();
 
     for primitive_group in block.get_primitivegroup() {
         decode_primitive_group_to_objs(primitive_group, granularity, lat_offset, lon_offset, date_granularity, &stringtable, &mut results);
@@ -341,13 +341,13 @@ impl<R: Read> Iterator for FileReader<R> {
 
 pub struct PBFReader<R: Read> {
     filereader: FileReader<R>,
-    _buffer: Vec<RcOSMObj>,
+    _buffer: Vec<ArcOSMObj>,
     _sorted_assumption: bool,
 }
 
 impl<R: Read> OSMReader for PBFReader<R> {
     type R = R;
-    type Obj = RcOSMObj;
+    type Obj = ArcOSMObj;
 
     fn new(reader: R) -> PBFReader<R> {
         PBFReader { filereader: FileReader::new(reader), _buffer: Vec::new(), _sorted_assumption: false }
@@ -364,7 +364,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
         self.filereader.into_inner()
     }
 
-    fn next(&mut self) -> Option<RcOSMObj> {
+    fn next(&mut self) -> Option<ArcOSMObj> {
         while self._buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel

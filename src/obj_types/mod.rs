@@ -1,9 +1,11 @@
 mod rc_types;
+mod arc_types;
 mod string_types;
 
 use {Node, Way, Relation, OSMObjBase};
 
 pub use self::rc_types::*;
+pub use self::arc_types::*;
 pub use self::string_types::*;
 
 impl From<RcNode> for StringNode {
