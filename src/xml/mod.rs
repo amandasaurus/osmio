@@ -411,3 +411,61 @@ impl<W: Write> Drop for XMLWriter<W> {
         self.close().unwrap();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use obj_types::StringNodeBuilder;
+
+	macro_rules! assert_escape {
+		( $name:ident, $input:expr, $output:expr ) => {
+			#[test]
+			fn $name() {
+                let s = $input;
+                let mut res = Vec::new();
+                write_xml_escaped(&mut res, s).unwrap();
+                let new_str = std::str::from_utf8(&res).unwrap();
+                assert_eq!(new_str, $output);
+			}
+		};
+	}
+
+    assert_escape!(escape1, "foo", "foo");
+    assert_escape!(escape2, "&foo", "&amp;foo");
+    assert_escape!(escape3, "foo bar", "foo bar");
+    assert_escape!(escape4, "foo\nbar", "foo\nbar");
+    assert_escape!(escape5, "&&foo", "&amp;&amp;foo");
+    assert_escape!(escape6, "&ergio", "&amp;ergio");
+
+	macro_rules! assert_write_obj {
+		( $name:ident, $input:expr, $output:expr ) => {
+			#[test]
+			fn $name() {
+                let o: StringOSMObj = $input.into();
+                let mut res = Vec::new();
+                let mut xmlwr = XMLWriter::new(&mut res);
+                xmlwr.write_obj(&o).unwrap();
+                xmlwr.close().unwrap();
+                drop(xmlwr);
+                let new_str = std::str::from_utf8(&res).unwrap();
+                assert_eq!(new_str, $output);
+			}
+		};
+	}
+
+
+	assert_write_obj!(node1,
+        StringNodeBuilder::default()
+			._id(1)
+			._version(2)
+			._changeset_id(1)
+			._timestamp(700.into())
+			._uid(1)
+			._user("&foo".to_string())
+			._lat_lon((0., 0.))
+			.build()
+			.unwrap(),
+	    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/0.2.1\">\n\t<node id=\"1\" visible=\"true\" version=\"2\" user=\"&amp;foo\" uid=\"1\" changeset=\"1\" timestamp=\"1970-01-01T00:11:40Z\" lat=\"0\" lon=\"0\"/>\n</osm>\n</osm>"
+	);
+
+}
