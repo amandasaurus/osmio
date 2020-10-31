@@ -365,7 +365,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
             // FIXME make this parallel
 
             // get the next block
-            let mut blob = try_opt!(self.filereader.next());
+            let mut blob = self.filereader.next()?;
 
             let blob_data = blob_raw_data(&mut blob).unwrap();
             let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
