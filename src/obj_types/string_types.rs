@@ -24,6 +24,8 @@ macro_rules! func_call_inner_set {
 #[builder(setter(strip_option))]
 pub struct StringNode {
     pub(crate) _id: ObjId,
+
+    #[builder(default="None")]
     pub(crate) _version: Option<u32>,
 
     #[builder(default="false")]
@@ -49,6 +51,7 @@ pub struct StringNode {
 #[builder(setter(strip_option))]
 pub struct StringWay {
     pub(crate) _id: ObjId,
+    #[builder(default="None")]
     pub(crate) _version: Option<u32>,
     #[builder(default="false")]
     pub(crate) _deleted: bool,
@@ -72,6 +75,7 @@ pub struct StringWay {
 #[builder(setter(strip_option))]
 pub struct StringRelation {
     pub(crate) _id: ObjId,
+    #[builder(default="None")]
     pub(crate) _version: Option<u32>,
     #[builder(default="false")]
     pub(crate) _deleted: bool,
