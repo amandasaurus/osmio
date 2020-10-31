@@ -259,6 +259,10 @@ pub trait OSMObj: OSMObjBase {
     fn as_way(&self) -> Option<&Self::Way>;
     fn as_relation(&self) -> Option<&Self::Relation>;
 
+    fn as_node_mut(&mut self) -> Option<&mut Self::Node>;
+    fn as_way_mut(&mut self) -> Option<&mut Self::Way>;
+    fn as_relation_mut(&mut self) -> Option<&mut Self::Relation>;
+
     fn is_node(&self) -> bool {
         self.object_type() == OSMObjectType::Node
     }

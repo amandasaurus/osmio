@@ -204,6 +204,31 @@ impl OSMObj for RcOSMObj {
         }
     }
 
+    fn as_node_mut(&mut self) -> Option<&mut RcNode> {
+        if let RcOSMObj::Node(n) = self {
+            Some(n)
+        } else {
+            None
+        }
+    }
+
+    fn as_way_mut(&mut self) -> Option<&mut RcWay> {
+        if let RcOSMObj::Way(w) = self {
+            Some(w)
+        } else {
+            None
+        }
+    }
+
+    fn as_relation_mut(&mut self) -> Option<&mut RcRelation> {
+        if let RcOSMObj::Relation(r) = self {
+            Some(r)
+        } else {
+            None
+        }
+    }
+
+
 
 }
 

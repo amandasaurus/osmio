@@ -221,6 +221,32 @@ impl OSMObj for StringOSMObj {
         }
     }
 
+    fn as_node_mut(&mut self) -> Option<&mut StringNode> {
+        if let StringOSMObj::Node(n) = self {
+            Some(n)
+        } else {
+            None
+        }
+    }
+
+    fn as_way_mut(&mut self) -> Option<&mut StringWay> {
+        if let StringOSMObj::Way(w) = self {
+            Some(w)
+        } else {
+            None
+        }
+    }
+
+    fn as_relation_mut(&mut self) -> Option<&mut StringRelation> {
+        if let StringOSMObj::Relation(r) = self {
+            Some(r)
+        } else {
+            None
+        }
+    }
+
+
+
 
 }
 
