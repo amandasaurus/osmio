@@ -130,8 +130,10 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
         let lon = lon_offset + (granularity * lon);
         let lon = 0.000000001 * (lon as f32);
         
-        let mut tags = Vec::new();
-        if has_tags {
+        let tags = if !has_tags {
+            None
+        } else {
+            let mut tags = Vec::new();
             loop {
                 //assert!(keys_vals_index <= keys_vals.len());
                 let next = keys_vals[keys_vals_index];
@@ -146,13 +148,16 @@ fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: 
                 }
                 // FIXME infinite loop detection maybe?
             }
-        }
 
-        let tags: Vec<_> = tags.iter()
-            .map(|&(kidx, vidx)| (stringtable[kidx as usize].clone(), stringtable[vidx as usize].clone()))
-            .filter_map(|(k, v)|
-                match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None })
-            .collect();
+            Some(
+                tags.iter()
+                .map(|&(kidx, vidx)| (stringtable[kidx as usize].clone(), stringtable[vidx as usize].clone()))
+                .filter_map(|(k, v)|
+                    match (k, v) { (Some(k), Some(v)) => Some((k, v)), _ => None })
+                .collect()
+                )
+        };
+
 
         let changeset_id = changesets[index] + last_changset;
         last_changset = changeset_id;

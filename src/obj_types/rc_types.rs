@@ -31,7 +31,7 @@ pub struct RcNode {
     pub(crate) _timestamp: Option<TimestampFormat>,
     pub(crate) _uid: Option<u32>,
     pub(crate) _user: Option<Rc<str>>,
-    pub(crate) _tags: Vec<(Rc<str>, Rc<str>)>,
+    pub(crate) _tags: Option<Vec<(Rc<str>, Rc<str>)>>,
 
     pub(crate) _lat_lon: Option<(Lat, Lon)>,
 }
@@ -102,14 +102,14 @@ impl OSMObjBase for RcOSMObj {
 
     fn num_tags(&self) -> usize {
         match self {
-            RcOSMObj::Node(x) => x._tags.len(),
+            RcOSMObj::Node(x) => x._tags.as_ref().map_or(0, |t| t.len()),
             RcOSMObj::Way(x) => x._tags.len(),
             RcOSMObj::Relation(x) => x._tags.len(),
         }
     }
     fn untagged(&self) -> bool {
         match self {
-            RcOSMObj::Node(x) => x._tags.is_empty(),
+            RcOSMObj::Node(x) => x._tags.as_ref().map_or(true, |t| t.is_empty()),
             RcOSMObj::Way(x) => x._tags.is_empty(),
             RcOSMObj::Relation(x) => x._tags.is_empty(),
         }
@@ -260,30 +260,45 @@ impl OSMObjBase for RcNode {
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=(&'a str, &'a str)>+'a>
     {
-        Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
+        match self._tags {
+            None => Box::new(std::iter::empty()),
+            Some(ref t) => Box::new(t.iter().map(|(k, v)| (k.as_ref(), v.as_ref()))),
+        }
     }
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str>
     {
-        let key = key.as_ref();
-        self._tags.iter().filter_map(|(k, v)| if &k.as_ref() == &key { Some(v.as_ref()) } else { None }).nth(0)
+        match &self._tags {
+            None => None,
+            Some(t) => {
+                let key = key.as_ref();
+                t.iter().filter_map(|(k, v)| if &k.as_ref() == &key { Some(v.as_ref()) } else { None }).nth(0)
+            }
+        }
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
         let key = key.as_ref();
         let value = value.into();
-        let idx = self._tags.iter().enumerate().filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).nth(0);
-        match idx {
-            None => self._tags.push((Rc::from(key), Rc::from(value.as_str()))),
-            Some(i) => self._tags[i] = (key.into(), Rc::from(value.as_str())),
+        match self._tags {
+            None => { self._tags = Some(vec![(Rc::from(key), Rc::from(value.as_str()))]); },
+            Some(ref mut tags) => {
+                let idx = tags.iter().enumerate().filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).nth(0);
+                match idx {
+                    None => tags.push((Rc::from(key), Rc::from(value.as_str()))),
+                    Some(i) => tags[i] = (key.into(), Rc::from(value.as_str())),
+                }
+            }
         }
     }
 
     fn unset_tag(&mut self, key: impl AsRef<str>) {
-        let key = key.as_ref();
-        let idx = self._tags.iter().enumerate().filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).nth(0);
-        if let Some(i) = idx {
-            self._tags.remove(i);
+        if let Some(ref mut tags) = self._tags {
+            let key = key.as_ref();
+            let idx = tags.iter().enumerate().filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).nth(0);
+            if let Some(i) = idx {
+                tags.remove(i);
+            }
         }
     }
 
