@@ -21,7 +21,7 @@ macro_rules! func_call_inner_set {
     };
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct ArcNode {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -30,12 +30,12 @@ pub struct ArcNode {
     pub(crate) _timestamp: Option<TimestampFormat>,
     pub(crate) _uid: Option<u32>,
     pub(crate) _user: Option<Arc<str>>,
-    pub(crate) _tags: Vec<(Arc<str>, Arc<str>)>,
+    pub(crate) _tags: Option<Vec<(Arc<str>, Arc<str>)>>,
 
     pub(crate) _lat_lon: Option<(Lat, Lon)>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct ArcWay {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -49,7 +49,7 @@ pub struct ArcWay {
     pub(crate) _nodes: Vec<ObjId>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct ArcRelation {
     pub(crate) _id: ObjId,
     pub(crate) _version: Option<u32>,
@@ -63,7 +63,7 @@ pub struct ArcRelation {
     pub(crate) _members: Vec<(OSMObjectType, ObjId, Arc<str>)>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ArcOSMObj {
     Node(ArcNode),
     Way(ArcWay),
@@ -125,14 +125,14 @@ impl OSMObjBase for ArcOSMObj {
 
     fn num_tags(&self) -> usize {
         match self {
-            ArcOSMObj::Node(x) => x._tags.len(),
+            ArcOSMObj::Node(x) => x._tags.as_ref().map_or(0, |t| t.len()),
             ArcOSMObj::Way(x) => x._tags.len(),
             ArcOSMObj::Relation(x) => x._tags.len(),
         }
     }
     fn untagged(&self) -> bool {
         match self {
-            ArcOSMObj::Node(x) => x._tags.is_empty(),
+            ArcOSMObj::Node(x) => x._tags.as_ref().map_or(true, |t| t.is_empty()),
             ArcOSMObj::Way(x) => x._tags.is_empty(),
             ArcOSMObj::Relation(x) => x._tags.is_empty(),
         }
@@ -298,48 +298,61 @@ impl OSMObjBase for ArcNode {
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
-        Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
+        match self._tags {
+            None => Box::new(std::iter::empty()),
+            Some(ref t) => Box::new(t.iter().map(|(k, v)| (k.as_ref(), v.as_ref()))),
+        }
     }
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str> {
         let key = key.as_ref();
-        self._tags
-            .iter()
-            .filter_map(|(k, v)| {
-                if &k.as_ref() == &key {
-                    Some(v.as_ref())
-                } else {
-                    None
-                }
-            })
-            .nth(0)
+        self._tags.as_ref().map_or(
+            None,
+            |tags| 
+             tags.iter()
+                .filter_map(|(k, v)| {
+                    if &k.as_ref() == &key {
+                        Some(v.as_ref())
+                    } else {
+                        None
+                    }
+                })
+                .nth(0)
+        )
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
         let key = key.as_ref();
         let value = value.into();
-        let idx = self
-            ._tags
-            .iter()
-            .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-            .nth(0);
-        match idx {
-            None => self._tags.push((Arc::from(key), Arc::from(value.as_str()))),
-            Some(i) => self._tags[i] = (key.into(), Arc::from(value.as_str())),
+        match self._tags {
+            None => {
+                self._tags = Some(vec![(Arc::from(key), Arc::from(value.as_str()))]);
+            }
+            Some(ref mut tags) => {
+                let idx = tags
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                    .nth(0);
+                match idx {
+                    None => tags.push((Arc::from(key), Arc::from(value.as_str()))),
+                    Some(i) => tags[i] = (key.into(), Arc::from(value.as_str())),
+                }
+            }
         }
     }
 
     fn unset_tag(&mut self, key: impl AsRef<str>) {
-        let key = key.as_ref();
-        let idx = self
-            ._tags
-            .iter()
-            .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-            .nth(0);
-        if let Some(i) = idx {
-            self._tags.remove(i);
+        if let Some(ref mut tags) = self._tags {
+            let key = key.as_ref();
+            let idx = tags
+                .iter()
+                .enumerate()
+                .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                .nth(0);
+            if let Some(i) = idx {
+                tags.remove(i);
+            }
         }
     }
 }

@@ -81,7 +81,6 @@ impl<R: Read> FileReader<R> {
     }
 }
 
-<<<<<<< HEAD
 fn decode_nodes(
     _primitive_group: &osmformat::PrimitiveGroup,
     _granularity: i64,
@@ -91,23 +90,9 @@ fn decode_nodes(
     _stringtable: &Vec<Option<Arc<str>>>,
     _results: &mut Vec<ArcOSMObj>,
 ) {
-||||||| merged common ancestors
-fn decode_nodes(_primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, _stringtable: &Vec<Option<Rc<str>>>, _results: &mut Vec<RcOSMObj>) {
-=======
-fn decode_nodes(
-    _primitive_group: &osmformat::PrimitiveGroup,
-    _granularity: i64,
-    _lat_offset: i64,
-    _lon_offset: i64,
-    _date_granularity: i32,
-    _stringtable: &Vec<Option<Rc<str>>>,
-    _results: &mut Vec<RcOSMObj>,
-) {
->>>>>>> main
     unimplemented!("Dense node");
 }
 
-<<<<<<< HEAD
 fn decode_dense_nodes(
     primitive_group: &osmformat::PrimitiveGroup,
     granularity: i64,
@@ -117,19 +102,6 @@ fn decode_dense_nodes(
     stringtable: &Vec<Option<Arc<str>>>,
     results: &mut Vec<ArcOSMObj>,
 ) {
-||||||| merged common ancestors
-fn decode_dense_nodes(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
-=======
-fn decode_dense_nodes(
-    primitive_group: &osmformat::PrimitiveGroup,
-    granularity: i64,
-    lat_offset: i64,
-    lon_offset: i64,
-    date_granularity: i32,
-    stringtable: &Vec<Option<Rc<str>>>,
-    results: &mut Vec<RcOSMObj>,
-) {
->>>>>>> main
     let dense = primitive_group.get_dense();
     let ids = dense.get_id();
     let lats = dense.get_lat();
@@ -222,13 +194,7 @@ fn decode_dense_nodes(
         let timestamp = TimestampFormat::EpochNunber(timestamp as i64);
         assert!(uid_id < std::i32::MAX);
 
-<<<<<<< HEAD
         results.push(ArcOSMObj::Node(ArcNode {
-||||||| merged common ancestors
-        results.push(RcOSMObj::Node(RcNode{
-=======
-        results.push(RcOSMObj::Node(RcNode {
->>>>>>> main
             _id: id as ObjId,
             _tags: tags,
             _lat_lon: Some((lat, lon)),
@@ -244,7 +210,6 @@ fn decode_dense_nodes(
     // convert the keys_vals to
 }
 
-<<<<<<< HEAD
 fn decode_ways(
     primitive_group: &osmformat::PrimitiveGroup,
     _granularity: i64,
@@ -254,19 +219,6 @@ fn decode_ways(
     stringtable: &Vec<Option<Arc<str>>>,
     results: &mut Vec<ArcOSMObj>,
 ) {
-||||||| merged common ancestors
-fn decode_ways(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
-=======
-fn decode_ways(
-    primitive_group: &osmformat::PrimitiveGroup,
-    _granularity: i64,
-    _lat_offset: i64,
-    _lon_offset: i64,
-    _date_granularity: i32,
-    stringtable: &Vec<Option<Rc<str>>>,
-    results: &mut Vec<RcOSMObj>,
-) {
->>>>>>> main
     let ways = primitive_group.get_ways();
     results.reserve(ways.len());
     for way in ways {
@@ -310,16 +262,8 @@ fn decode_ways(
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
         let timestamp = TimestampFormat::EpochNunber(way.get_info().get_timestamp());
-<<<<<<< HEAD
 
         results.push(ArcOSMObj::Way(ArcWay {
-||||||| merged common ancestors
-        
-        results.push(RcOSMObj::Way(RcWay{
-=======
-
-        results.push(RcOSMObj::Way(RcWay {
->>>>>>> main
             _id: id,
             _tags: tags,
             _nodes: nodes,
@@ -338,7 +282,6 @@ fn decode_ways(
     }
 }
 
-<<<<<<< HEAD
 fn decode_relations(
     primitive_group: &osmformat::PrimitiveGroup,
     _granularity: i64,
@@ -348,19 +291,6 @@ fn decode_relations(
     stringtable: &Vec<Option<Arc<str>>>,
     results: &mut Vec<ArcOSMObj>,
 ) {
-||||||| merged common ancestors
-fn decode_relations(primitive_group: &osmformat::PrimitiveGroup, _granularity: i64, _lat_offset: i64, _lon_offset: i64, _date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, results: &mut Vec<RcOSMObj>) {
-=======
-fn decode_relations(
-    primitive_group: &osmformat::PrimitiveGroup,
-    _granularity: i64,
-    _lat_offset: i64,
-    _lon_offset: i64,
-    _date_granularity: i32,
-    stringtable: &Vec<Option<Rc<str>>>,
-    results: &mut Vec<RcOSMObj>,
-) {
->>>>>>> main
     let _last_timestamp = 0;
     for relation in primitive_group.get_relations() {
         let id = relation.get_id() as ObjId;
@@ -421,17 +351,8 @@ fn decode_relations(
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
         let timestamp = TimestampFormat::EpochNunber(relation.get_info().get_timestamp());
-<<<<<<< HEAD
 
         results.push(ArcOSMObj::Relation(ArcRelation {
-||||||| merged common ancestors
-        
-        
-        results.push(RcOSMObj::Relation(RcRelation{
-=======
-
-        results.push(RcOSMObj::Relation(RcRelation {
->>>>>>> main
             _id: id,
             _tags: tags,
             _members: members,
@@ -449,7 +370,6 @@ fn decode_relations(
     }
 }
 
-<<<<<<< HEAD
 fn decode_primitive_group_to_objs(
     primitive_group: &osmformat::PrimitiveGroup,
     granularity: i64,
@@ -459,19 +379,6 @@ fn decode_primitive_group_to_objs(
     stringtable: &Vec<Option<Arc<str>>>,
     mut results: &mut Vec<ArcOSMObj>,
 ) {
-||||||| merged common ancestors
-fn decode_primitive_group_to_objs(primitive_group: &osmformat::PrimitiveGroup, granularity: i64, lat_offset: i64, lon_offset: i64, date_granularity: i32, stringtable: &Vec<Option<Rc<str>>>, mut results: &mut Vec<RcOSMObj>) {
-=======
-fn decode_primitive_group_to_objs(
-    primitive_group: &osmformat::PrimitiveGroup,
-    granularity: i64,
-    lat_offset: i64,
-    lon_offset: i64,
-    date_granularity: i32,
-    stringtable: &Vec<Option<Rc<str>>>,
-    mut results: &mut Vec<RcOSMObj>,
-) {
->>>>>>> main
     let date_granularity = date_granularity / 1000;
     if !primitive_group.get_nodes().is_empty() {
         decode_nodes(
@@ -518,31 +425,12 @@ fn decode_primitive_group_to_objs(
     }
 }
 
-<<<<<<< HEAD
 fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<ArcOSMObj> {
     let stringtable: Vec<Option<Arc<str>>> = block
         .take_stringtable()
         .take_s()
-||||||| merged common ancestors
-fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<RcOSMObj> {
-
-    let stringtable: Vec<Option<Rc<str>>> = block.take_stringtable().take_s()
-=======
-fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<RcOSMObj> {
-    let stringtable: Vec<Option<Rc<str>>> = block
-        .take_stringtable()
-        .take_s()
->>>>>>> main
         .into_iter()
-<<<<<<< HEAD
         .map(|chars| std::str::from_utf8(&chars).ok().map(|s| Arc::from(s)))
-||||||| merged common ancestors
-        .map(|chars|
-           std::str::from_utf8(&chars).ok().map(|s| Rc::from(s))
-        )
-=======
-        .map(|chars| std::str::from_utf8(&chars).ok().map(|s| Rc::from(s)))
->>>>>>> main
         .collect();
 
     let granularity = block.get_granularity() as i64;
