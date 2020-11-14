@@ -1,3 +1,7 @@
+# v0.4
+
+* PBF reader returns `Arc`
+
 # v0.2.1 (2020-01-21)
 
 * Refactor PBF objects internally to be more effecient
