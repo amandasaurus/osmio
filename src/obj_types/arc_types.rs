@@ -306,10 +306,8 @@ impl OSMObjBase for ArcNode {
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str> {
         let key = key.as_ref();
-        self._tags.as_ref().map_or(
-            None,
-            |tags| 
-             tags.iter()
+        self._tags.as_ref().map_or(None, |tags| {
+            tags.iter()
                 .filter_map(|(k, v)| {
                     if &k.as_ref() == &key {
                         Some(v.as_ref())
@@ -318,7 +316,7 @@ impl OSMObjBase for ArcNode {
                     }
                 })
                 .nth(0)
-        )
+        })
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {

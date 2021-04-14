@@ -109,7 +109,7 @@ impl std::cmp::PartialEq for TimestampFormat {
 }
 
 /// The basic metadata fields all OSM objects share
-pub trait OSMObjBase: PartialEq+Debug+Clone {
+pub trait OSMObjBase: PartialEq + Debug + Clone {
     fn id(&self) -> ObjId;
     fn set_id(&mut self, val: impl Into<ObjId>);
     fn version(&self) -> Option<u32>;
