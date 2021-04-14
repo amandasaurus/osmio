@@ -433,14 +433,14 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         }
 
         if obj.is_node() && obj.untagged() {
-            write!(self.writer, "/>")?;
+            write!(self.writer, " />")?;
             return Ok(());
         }
         write!(self.writer, ">")?;
 
         if let Some(way) = obj.as_way() {
             for nid in way.nodes() {
-                write!(self.writer, "\n\t\t<nd ref=\"{}\"/>", nid)?;
+                write!(self.writer, "\n\t\t<nd ref=\"{}\" />", nid)?;
             }
         }
 
@@ -463,7 +463,7 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             write_xml_escaped(&mut self.writer, k)?;
             write!(self.writer, "\" v=\"")?;
             write_xml_escaped(&mut self.writer, v)?;
-            write!(self.writer, "\"/>")?;
+            write!(self.writer, "\" />")?;
         }
 
         write!(
