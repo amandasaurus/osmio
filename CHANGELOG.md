@@ -1,3 +1,8 @@
+# Unreleased
+
+* ADDED: `way.is_closed()` and `way.is_area()` to work with `Way`s which represent
+  two dimensional shapes.
+
 # v0.4
 
 * PBF reader returns `Arc`

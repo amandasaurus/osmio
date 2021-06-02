@@ -169,6 +169,29 @@ pub trait Way: OSMObjBase {
     fn num_nodes(&self) -> usize;
     fn node(&self, idx: usize) -> Option<ObjId>;
     fn set_nodes(&mut self, nodes: impl IntoIterator<Item = impl Into<ObjId>>);
+
+    /// A Way which begins and ends with the same Node is considered "closed".
+    ///
+    /// A closed way that also has an `area=yes` tag should be interpreted as an area.
+    ///
+    /// This method only compares Node ID's, and does no location based comparison.
+    fn is_closed(&self) -> bool {
+        match (self.nodes().first(), self.nodes().last()) {
+            (Some(a), Some(b)) => a == b,
+            _ => false,
+        }
+    }
+
+    /// When `is_area` is true, the Way should be interpreted as a 2-D shape rather than a 1-D
+    /// linestring.
+    fn is_area(&self) -> bool {
+        // Generally any closed way represents an area the `area=yes` tag should also be present,
+        // but sometimes it's `area=highway` or other things. In the interest of accepting all
+        // plausible input, we assume it's an area unless explicitly marked otherwise.
+        //
+        // See also: https://taginfo.openstreetmap.org/keys/area#values
+        self.is_closed() && self.tag("area") != Some("no")
+    }
 }
 
 /// A Relation
