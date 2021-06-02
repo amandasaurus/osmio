@@ -382,8 +382,8 @@ pub trait OSMWriter<W: Write> {
     /// `is_open` will return `false`.
     fn close(&mut self) -> Result<(), OSMWriteError>;
 
-    /// Return true iff this writer is closed.
-    /// If open you should be able to continue to write objects to it. if closed you cannot write
+    /// Return true iff this writer is not closed.
+    /// If open you should be able to continue to write objects to it. If closed you cannot write
     /// any more OSM objects to it.
     fn is_open(&self) -> bool;
 
