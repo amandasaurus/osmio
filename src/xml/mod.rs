@@ -223,12 +223,12 @@ fn node_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj>
         .map(|x| TimestampFormat::ISOString(x.to_owned()));
     let uid = get_xml_attribute(&mut attrs, "uid").and_then(|x| x.parse().ok());
     let user = get_xml_attribute(&mut attrs, "user");
-    let lat = get_xml_attribute(&mut attrs, "lat")?.parse().ok();
-    let lon = get_xml_attribute(&mut attrs, "lon")?.parse().ok();
+    let lat = get_xml_attribute(&mut attrs, "lat")?.parse();
+    let lon = get_xml_attribute(&mut attrs, "lon")?.parse();
 
     let lat_lon = match (lat, lon) {
-        (Some(lat), Some(lon)) => Some((lat, lon)),
-        _ => None,
+        (Ok(lat), Ok(lon)) => Some((lat, lon)),
+        _errs => None,
     };
     let deleted = get_xml_attribute(&mut attrs, "visible")
         .and_then(|val| match val.as_str() {
@@ -494,6 +494,7 @@ impl<W: Write> Drop for XMLWriter<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Lat, Lon};
     use obj_types::StringNodeBuilder;
 
     macro_rules! assert_escape {
@@ -540,7 +541,7 @@ mod tests {
 			._timestamp(700.into())
 			._uid(1)
 			._user("&foo".to_string())
-			._lat_lon((0., 0.))
+			._lat_lon((Lat(0), Lon(0)))
 			.build()
 			.unwrap(),
 	    format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n\t<node id=\"1\" visible=\"true\" version=\"2\" user=\"&amp;foo\" uid=\"1\" changeset=\"1\" timestamp=\"1970-01-01T00:11:40Z\" lat=\"0\" lon=\"0\" />\n</osm>\n</osm>", crate::version())

@@ -13,8 +13,10 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::Debug;
+use std::fmt::Display;
 use std::io::{Read, Write};
 use std::iter::{ExactSizeIterator, Iterator};
+use std::str::FromStr;
 use utils::{epoch_to_iso, iso_to_epoch};
 
 #[macro_use]
@@ -35,11 +37,140 @@ mod tests;
 /// OSM id of object
 pub type ObjId = i64;
 
-/// Latitude
-pub type Lat = f32;
+/// How many nanodegrees are represented by each unit in [`Lat::inner()`].
+/// We use the same internal precision as OpenStreetMap.org, 100 nanodegrees.
+pub const COORD_PRECISION_NANOS: i32 = 100;
 
-/// Longitude
-pub type Lon = f32;
+/// Number of internal units (as returned from [`Lat::inner`]) in one degree.
+///
+/// See [`COORD_PRECISION_NANOS`].
+pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f64;
+
+macro_rules! lat_lon_impl {
+    ($lat_or_lon: ident) => {
+        /// Latitude and Longitude are stored internally as a 32-bit signed integer, in units
+        /// of [`COORD_PRECISION_NANOS`].
+        ///
+        /// This gives us 7 decimal places of precision - the same precision that OSM uses.
+        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+        pub struct $lat_or_lon(i32);
+
+        impl $lat_or_lon {
+            /// Build a Lat/Lon from it's inner representation, which is `degrees * 1e7`.
+            ///
+            /// ```
+            /// use osmio::Lat;
+            /// // build a Lat for 1.2345678 degrees South
+            /// let lat = Lat::from_inner(12345678);
+            /// ```
+            pub fn from_inner(inner: i32) -> Self {
+                Self(inner)
+            }
+
+            pub fn inner(&self) -> i32 {
+                self.0
+            }
+
+            /// Returns the number of degrees as a 64-bit float.
+            ///
+            /// Note: The actual precision is [`COORD_PRECISION_NANOS`], which is less than
+            /// 64-bits. It is derived from an inner i32 representation, which mirrors the 
+            /// precision used by OpenStreetMap.org
+            pub fn degrees(&self) -> f64 {
+                self.0 as f64 / COORD_SCALE_FACTOR
+            }
+        }
+
+        impl Display for $lat_or_lon {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                // TODO: fix precision
+                Display::fmt(&self.degrees(), f)
+            }
+        }
+
+        impl Debug for $lat_or_lon {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                // TODO: fix precision
+                Debug::fmt(&self.degrees(), f)
+            }
+        }
+
+        /// ```rust
+        ///  use osmio::Lat;
+        ///  use std::str::FromStr;
+        ///
+        ///  let lat = Lat::from_str("1.23").unwrap();
+        ///  assert_eq!(1.23, lat.degrees());
+        ///  assert_eq!(12300000, lat.inner());
+        ///
+        ///  assert!(Lat::from_str("-180.0").is_ok());
+        ///  assert!(Lat::from_str("xxxx").is_err());
+        ///  assert!(Lat::from_str("600.0").is_err());
+        /// ```
+        impl FromStr for $lat_or_lon {
+            type Err = ParseLatLonError;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match (f64::from_str(s)? * COORD_SCALE_FACTOR).round() {
+                    x if x > (i32::MAX as f64) => Err(ParseLatLonError::TooLarge(x)),
+                    x if x < (i32::MIN as f64) => Err(ParseLatLonError::TooSmall(x)),
+                    x => Ok(Self(x as i32)),
+                }
+            }
+        }
+    };
+}
+
+// Latitude
+lat_lon_impl!(Lat);
+
+// Longitude
+lat_lon_impl!(Lon);
+
+/// An error while trying to parse a string into a [`Lat`] or [`Lon`]
+#[derive(Debug)]
+pub enum ParseLatLonError {
+    /// Number was not parseable as a Float, wraps the underlying [`std::num::ParseFloatError`].
+    ParseFloatError(std::num::ParseFloatError),
+
+    /// The parsed float was too large to fit into our Lat/Lon representation.
+    ///
+    /// This should never happen for "normal" Lats and Lons, i.e. those between (-90..90) or
+    /// (-180..+180), respectively.
+    TooLarge(f64),
+
+    /// The parsed float was too small to fit into our Lat/Lon representation.
+    ///
+    /// This should never happen for "normal" Lats and Lons, i.e. those between (-90..90) or
+    /// (-180..+180), respectively.
+    TooSmall(f64),
+}
+
+impl std::error::Error for ParseLatLonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        if let Self::ParseFloatError(inner) = self {
+            Some(inner)
+        } else {
+            None
+        }
+    }
+}
+
+impl Display for ParseLatLonError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ParseFloatError(inner) => Display::fmt(inner, f),
+            Self::TooLarge(float) => write!(f, "{} is too large to represent as a Lat/Lon", float),
+            Self::TooSmall(float) => write!(f, "{} is too small to represent as a Lat/Lon", float),
+        }
+    }
+}
+
+impl From<std::num::ParseFloatError> for ParseLatLonError {
+    fn from(err: std::num::ParseFloatError) -> Self {
+        ParseLatLonError::ParseFloatError(err)
+    }
+}
 
 #[derive(Debug, Clone, Eq, Ord)]
 pub enum TimestampFormat {
