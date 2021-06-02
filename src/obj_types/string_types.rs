@@ -20,8 +20,8 @@ macro_rules! func_call_inner_set {
     };
 }
 
-#[builder(setter(strip_option))]
 #[derive(PartialEq, Debug, Builder, Clone)]
+#[builder(setter(strip_option))]
 pub struct StringNode {
     pub(crate) _id: ObjId,
 
