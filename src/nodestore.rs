@@ -1,3 +1,5 @@
+use crate::{Lat, Lon};
+
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fs;
 use std::io::{BufReader, BufWriter};
@@ -21,21 +23,27 @@ impl NodeStoreWriter {
         }
     }
 
-    pub fn set(&mut self, node_id: u64, lat: f32, lon: f32) {
+    pub fn set(&mut self, node_id: u64, lat: Lat, lon: Lon) {
         if self.max_node_id < node_id {
             //self.fp.set_len(node_id*8);
             self.fp.seek(SeekFrom::End(0)).unwrap();
             for _ in self.max_node_id..node_id {
-                self.fp.write_f32::<BigEndian>(200f32).unwrap();
-                self.fp.write_f32::<BigEndian>(200f32).unwrap();
+                self.fp
+                    .write_i32::<BigEndian>(SENTINAL_VALUE_FOR_EMPTY)
+                    .unwrap();
+                self.fp
+                    .write_i32::<BigEndian>(SENTINAL_VALUE_FOR_EMPTY)
+                    .unwrap();
             }
             self.max_node_id = node_id;
         }
         self.fp.seek(SeekFrom::Start(node_id * 8)).unwrap();
-        self.fp.write_f32::<BigEndian>(lat).unwrap();
-        self.fp.write_f32::<BigEndian>(lon).unwrap();
+        self.fp.write_i32::<BigEndian>(lat.inner()).unwrap();
+        self.fp.write_i32::<BigEndian>(lon.inner()).unwrap();
     }
 }
+
+const SENTINAL_VALUE_FOR_EMPTY: i32 = i32::MAX;
 
 impl NodeStoreReader {
     pub fn open(filename: &str) -> Self {
@@ -43,14 +51,14 @@ impl NodeStoreReader {
         NodeStoreReader { fp: fp }
     }
 
-    pub fn get(&mut self, node_id: &u64) -> Option<(f32, f32)> {
+    pub fn get(&mut self, node_id: &u64) -> Option<(Lat, Lon)> {
         self.fp.seek(SeekFrom::Start(node_id * 8)).unwrap();
-        let lat = self.fp.read_f32::<BigEndian>().unwrap();
-        let lon = self.fp.read_f32::<BigEndian>().unwrap();
-        if lat == 200f32 || lon == 200f32 {
+        let lat = self.fp.read_i32::<BigEndian>().unwrap();
+        let lon = self.fp.read_i32::<BigEndian>().unwrap();
+        if lat == SENTINAL_VALUE_FOR_EMPTY || lon == SENTINAL_VALUE_FOR_EMPTY {
             None
         } else {
-            Some((lat, lon))
+            Some((Lat::from_inner(lat), Lon::from_inner(lon)))
         }
     }
 }

@@ -9,6 +9,7 @@ use std::iter::Iterator;
 use std::sync::Arc;
 
 use super::*;
+use crate::COORD_PRECISION_NANOS;
 
 use flate2::read::ZlibDecoder;
 
@@ -41,7 +42,7 @@ fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
 
 impl<R: Read> FileReader<R> {
     pub fn new(reader: R) -> Self {
-        FileReader { reader: reader }
+        FileReader { reader }
     }
 
     pub fn inner(&self) -> &R {
@@ -83,7 +84,7 @@ impl<R: Read> FileReader<R> {
 
 fn decode_nodes(
     _primitive_group: &osmformat::PrimitiveGroup,
-    _granularity: i64,
+    _granularity: i32,
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
@@ -95,7 +96,7 @@ fn decode_nodes(
 
 fn decode_dense_nodes(
     primitive_group: &osmformat::PrimitiveGroup,
-    granularity: i64,
+    granularity: i32,
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
@@ -124,9 +125,9 @@ fn decode_dense_nodes(
     let mut keys_vals_index = 0;
 
     // NB it's important that these start at zero, makes the code easier later
-    let mut last_id = 0;
-    let mut last_lat = 0;
-    let mut last_lon = 0;
+    let mut last_id: i64 = 0;
+    let mut last_raw_lat: i32 = 0;
+    let mut last_raw_lon: i32 = 0;
     let mut last_timestamp = 0;
     let mut last_changset = 0;
     let mut last_uid = 0;
@@ -136,16 +137,25 @@ fn decode_dense_nodes(
         // last_* start off 0
         let id = ids[index] + last_id;
         last_id = id;
-        let lat = lats[index] + last_lat;
-        last_lat = lat;
-        let lon = lons[index] + last_lon;
-        last_lon = lon;
 
-        // FIXME lat/lon here seem to be missing the last digit compared to the website
-        let lat = lat_offset + (granularity * lat);
-        let lat = 0.000000001 * (lat as f32);
-        let lon = lon_offset + (granularity * lon);
-        let lon = 0.000000001 * (lon as f32);
+        let raw_lat = i32::try_from(lats[index] + last_raw_lat as i64)
+            .expect("raw_lat was larger than the OSM precision allows");
+        last_raw_lat = raw_lat;
+
+        let raw_lon = i32::try_from(lons[index] + last_raw_lon as i64)
+            .expect("raw_lon was larger than OSM precision allows");
+        last_raw_lon = raw_lon;
+
+        // granularity is in nanodegrees
+        let scale_factor = granularity / COORD_PRECISION_NANOS;
+        let mut internal_lat = raw_lat * scale_factor;
+        let mut internal_lon = raw_lon * scale_factor;
+
+        // Offsets from pbf are in nanodegrees
+        let internal_lat_offset = lat_offset / COORD_PRECISION_NANOS as i64;
+        let internal_lon_offset = lon_offset / COORD_PRECISION_NANOS as i64;
+        internal_lat += internal_lat_offset as i32;
+        internal_lon += internal_lon_offset as i32;
 
         let tags = if !has_tags {
             None
@@ -197,7 +207,7 @@ fn decode_dense_nodes(
         results.push(ArcOSMObj::Node(ArcNode {
             _id: id as ObjId,
             _tags: tags,
-            _lat_lon: Some((lat, lon)),
+            _lat_lon: Some((Lat(internal_lat), Lon(internal_lon))),
             _deleted: !denseinfo.get_visible().get(index).unwrap_or(&true),
             _changeset_id: Some(changeset_id as u32),
             _uid: Some(uid_id as u32),
@@ -212,7 +222,7 @@ fn decode_dense_nodes(
 
 fn decode_ways(
     primitive_group: &osmformat::PrimitiveGroup,
-    _granularity: i64,
+    _granularity: i32,
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
@@ -284,7 +294,7 @@ fn decode_ways(
 
 fn decode_relations(
     primitive_group: &osmformat::PrimitiveGroup,
-    _granularity: i64,
+    _granularity: i32,
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
@@ -372,7 +382,7 @@ fn decode_relations(
 
 fn decode_primitive_group_to_objs(
     primitive_group: &osmformat::PrimitiveGroup,
-    granularity: i64,
+    granularity: i32,
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
@@ -433,7 +443,7 @@ fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<ArcOSMObj> 
         .map(|chars| std::str::from_utf8(&chars).ok().map(|s| Arc::from(s)))
         .collect();
 
-    let granularity = block.get_granularity() as i64;
+    let granularity = block.get_granularity();
     let lat_offset = block.get_lat_offset();
     let lon_offset = block.get_lon_offset();
     let date_granularity = block.get_date_granularity();
