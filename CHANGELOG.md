@@ -1,4 +1,4 @@
-# v0.5
+# v0.5.0
 
 * ADDED: `way.is_closed()` and `way.is_area()` to work with `Way`s which represent
   two dimensional shapes.
