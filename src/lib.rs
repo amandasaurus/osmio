@@ -416,6 +416,6 @@ pub trait OSMWriter<W: Write> {
 }
 
 /// The version string of this library.
-fn version<'a>() -> &'a str {
+pub fn version<'a>() -> &'a str {
     option_env!("CARGO_PKG_VERSION").unwrap_or("unknown-non-cargo-build")
 }
