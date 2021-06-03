@@ -86,3 +86,84 @@ mod timestamp_format {
         Equal
     );
 }
+
+#[test]
+fn area_ways() {
+    use crate::{obj_types::StringOSMObj, xml::XMLReader};
+
+    macro_rules! assert_closed_area {
+        ($input: expr, $expect_is_closed: expr, $expect_is_area: expr) => {
+            let mut reader = XMLReader::new($input.as_bytes());
+            let mut found = false;
+            for obj in reader.objects() {
+                if let StringOSMObj::Way(osm_way) = obj {
+                    found = true;
+                    assert_eq!($expect_is_closed, osm_way.is_closed());
+                    assert_eq!($expect_is_area, osm_way.is_area());
+                }
+            }
+            assert!(found, "no Ways were found");
+        };
+    }
+
+    let not_closed_input = r#"
+        <?xml version="1.0" encoding="utf-8"?>
+        <osm version="0.6" generator="osmio/0.4.0">\
+        <node id="1" lat="0" lon="0" />
+        <node id="2" lat="1" lon="0" />
+        <node id="3" lat="1" lon="1" />
+        <way id="1">
+            <nd ref="1" />
+            <nd ref="2" />
+            <nd ref="3" />
+        </way>
+        </osm>"#;
+    assert_closed_area!(not_closed_input, false, false);
+
+    let closed_area_input = r#"
+        <?xml version="1.0" encoding="utf-8"?>
+        <osm version="0.6" generator="osmio/0.4.0">\
+        <node id="1" lat="0" lon="0" />
+        <node id="2" lat="1" lon="0" />
+        <node id="3" lat="1" lon="1" />
+        <way id="1">
+            <nd ref="1" />
+            <nd ref="2" />
+            <nd ref="3" />
+            <nd ref="1" />
+        </way>
+        </osm>"#;
+    assert_closed_area!(closed_area_input, true, true);
+
+    let closed_nonarea_input = r#"
+        <?xml version="1.0" encoding="utf-8"?>
+        <osm version="0.6" generator="osmio/0.4.0">\
+        <node id="1" lat="0" lon="0" />
+        <node id="2" lat="1" lon="0" />
+        <node id="3" lat="1" lon="1" />
+        <way id="1">
+            <nd ref="1" />
+            <nd ref="2" />
+            <nd ref="3" />
+            <nd ref="1" />
+            <tag k="area" v="no" />
+        </way>
+        </osm>"#;
+    assert_closed_area!(closed_nonarea_input, true, false);
+
+    let closed_explicit_area_input = r#"
+        <?xml version="1.0" encoding="utf-8"?>
+        <osm version="0.6" generator="osmio/0.4.0">\
+        <node id="1" lat="0" lon="0" />
+        <node id="2" lat="1" lon="0" />
+        <node id="3" lat="1" lon="1" />
+        <way id="1">
+            <nd ref="1" />
+            <nd ref="2" />
+            <nd ref="3" />
+            <nd ref="1" />
+            <tag k="area" v="yes" />
+        </way>
+        </osm>"#;
+    assert_closed_area!(closed_explicit_area_input, true, true);
+}
