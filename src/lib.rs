@@ -308,7 +308,7 @@ pub trait OSMReader {
         self.set_sorted_assumption(false);
     }
 
-    /// Conver to the underlying reader
+    /// Convert to the underlying reader
     fn into_inner(self) -> Self::R;
 
     fn inner(&self) -> &Self::R;
