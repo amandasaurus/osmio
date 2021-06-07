@@ -1,7 +1,14 @@
 # v0.5.0
 
-* ADDED: `way.is_closed()` and `way.is_area()` to work with `Way`s which represent
-  two dimensional shapes.
+* BREAKING: Reduced numerical error in Lat/Lon representation. osmio now
+  matches OpenStreetMap's internal precision model, storing location as a
+  32-bit integer of 100 nano-degree units. If you need decimal degrees,
+  convert a Lat/Lon to f64 with `lat.degrees()`.
+  This reduces the numerical error of the representation from a worst case of
+  about 1 meter to worst case of about 1 centimeter (see
+  https://wiki.openstreetmap.org/wiki/Node).
+* ADDED: `way.is_closed()` and `way.is_area()` to work with `Way`s which
+  represent two dimensional shapes.
 
 # v0.4
 
