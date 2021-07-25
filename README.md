@@ -9,4 +9,4 @@ There is full read & write support for XML, OPL and read support for PBF file fo
 # Copyright
 
 
-Copyright GNU Affero General Public Licence 3 or later. Copyright 2017 Rory McCann <rory@technomancy.org>
+Copyright GNU Affero General Public Licence 3 or later. Copyright 2017→2021 Amanda McCann <amanda@technomancy.org>
