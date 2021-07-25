@@ -1,10 +1,10 @@
 [package]
 name = "osmio"
 version = "0.5.0-rc1"
-authors = ["Rory McCann <rory@technomancy.org>"]
+authors = ["Amanda McCann <amanda@technomancy.org>"]
 keywords = ["openstreetmap", "osm"]
 license = "AGPL-3.0"
-repository = "https://github.com/rory/osmio/"
+repository = "https://github.com/amandasaurus/osmio/"
 description = "Read and write OpenStreetMap data files"
 
 [dependencies]
