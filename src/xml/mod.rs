@@ -516,6 +516,7 @@ mod tests {
     assert_escape!(escape4, "foo\nbar", "foo\nbar");
     assert_escape!(escape5, "&&foo", "&amp;&amp;foo");
     assert_escape!(escape6, "&ergio", "&amp;ergio");
+    assert_escape!(escape7, "foo & bar", "foo &amp; bar");
 
     macro_rules! assert_write_obj {
         ( $name:ident, $input:expr, $output:expr ) => {
