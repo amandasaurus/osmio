@@ -1,4 +1,4 @@
-# v0.5.0
+# v0.5.0 (2021-08-14)
 
 * BREAKING: Reduced numerical error in Lat/Lon representation. osmio now
   matches OpenStreetMap's internal precision model, storing location as a
