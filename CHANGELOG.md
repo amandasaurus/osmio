@@ -1,3 +1,10 @@
+# Unreleased
+
+* Added conveniece methods to make Node lat/lons easier to work with & more
+  ergonomic
+* Refactored the `osc` output, which fixes bug with amperstands in usernames
+  not being encoded.
+
 # v0.5.0 (2021-08-14)
 
 * BREAKING: Reduced numerical error in Lat/Lon representation. osmio now
