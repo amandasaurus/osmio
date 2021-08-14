@@ -17,7 +17,7 @@ pub struct XMLReader<R: Read> {
     parser: Events<BufReader<R>>,
 }
 
-fn write_xml_escaped(writer: &mut impl Write, s: &str) -> std::io::Result<()> {
+pub(crate) fn write_xml_escaped(writer: &mut impl Write, s: &str) -> std::io::Result<()> {
     for c in s.chars() {
         match c {
             '&' => write!(writer, "&amp;")?,
