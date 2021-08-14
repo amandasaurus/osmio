@@ -347,8 +347,8 @@ impl Node for StringNode {
         self._lat_lon
     }
 
-    fn set_lat_lon(&mut self, loc: impl Into<Option<(Lat, Lon)>>) {
-        self._lat_lon = loc.into();
+    fn set_lat_lon_direct(&mut self, loc: Option<(Lat, Lon)>) {
+        self._lat_lon = loc;
     }
 }
 

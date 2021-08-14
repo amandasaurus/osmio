@@ -10,7 +10,7 @@ extern crate xml as xml_rs;
 extern crate derive_builder;
 
 use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -52,6 +52,14 @@ macro_rules! lat_lon_impl {
         /// of [`COORD_PRECISION_NANOS`].
         ///
         /// This gives us 7 decimal places of precision - the same precision that OSM uses.
+        /// 
+        /// ```
+        /// use std::convert::TryFrom;
+        /// use osmio::Lat;
+        /// let lat = Lat::try_from(1.0).unwrap();
+        /// let float_lat: f64 = lat.into();
+        /// assert_eq!(float_lat, 1.);
+        /// ```
         #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
         pub struct $lat_or_lon(i32);
 
@@ -116,6 +124,30 @@ macro_rules! lat_lon_impl {
                     x if x < (i32::MIN as f64) => Err(ParseLatLonError::TooSmall(x)),
                     x => Ok(Self(x as i32)),
                 }
+            }
+        }
+
+        impl From<$lat_or_lon> for f64 {
+            fn from(val: $lat_or_lon) -> f64 {
+                val.degrees()
+            }
+        }
+
+        impl TryFrom<f64> for $lat_or_lon {
+            type Error = ParseLatLonError;
+            fn try_from(val: f64) -> Result<$lat_or_lon, Self::Error> {
+                match (val * COORD_SCALE_FACTOR).round() {
+                    x if x > (i32::MAX as f64) => Err(ParseLatLonError::TooLarge(x)),
+                    x if x < (i32::MIN as f64) => Err(ParseLatLonError::TooSmall(x)),
+                    x => Ok(Self(x as i32)),
+                }
+            }
+        }
+
+        impl TryFrom<f32> for $lat_or_lon {
+            type Error = ParseLatLonError;
+            fn try_from(val: f32) -> Result<$lat_or_lon, Self::Error> {
+                $lat_or_lon::try_from(val as f64)
             }
         }
     };
@@ -286,12 +318,64 @@ pub trait OSMObjBase: PartialEq + Debug + Clone {
 
 /// A Node
 pub trait Node: OSMObjBase {
+    /// Latitude & Longitude of the node (if it's set)
     fn lat_lon(&self) -> Option<(Lat, Lon)>;
+
+    /// Latitude & Longitude of the node as `f64` (if it's set)
+    fn lat_lon_f64(&self) -> Option<(f64, f64)> {
+        self.lat_lon().map(|(lat, lon)| (lat.into(), lon.into()))
+
+    }
+    /// True iff this node has latitude & longitude set
     fn has_lat_lon(&self) -> bool {
         self.lat_lon().is_some()
     }
 
-    fn set_lat_lon(&mut self, loc: impl Into<Option<(Lat, Lon)>>);
+    /// Remove the lat & lon for this node
+    fn unset_lat_lon(&mut self) {
+        self.set_lat_lon_direct(None);
+    }
+
+
+    /// Directly set the lat & lon of the node, see `set_lat_lon()` as a more convienient method.
+    fn set_lat_lon_direct(&mut self, loc: Option<(Lat, Lon)>);
+
+    /// Set the Latitude & Longitude.
+    ///
+    /// The type signature is complicated so you can convert from f64
+    /// ```rust
+    /// use osmio::Node;
+    /// # use osmio::obj_types::StringNodeBuilder;
+    /// # let mut node = StringNodeBuilder::default()._id(1).build().unwrap();
+    ///
+    /// // It can convert from f64
+    /// node.set_lat_lon((0.0_f64, 0.0_f64));
+    /// assert_eq!(node.lat_lon_f64().unwrap(), (0., 0.));
+    ///
+    /// // .. or from f32
+    /// node.set_lat_lon((0.0_f32, 0.0_f32));
+    /// assert_eq!(node.lat_lon_f64().unwrap(), (0., 0.));
+    ///
+    /// // You can set to None too
+    /// node.set_lat_lon(None as Option<(f64, f64)>);
+    /// assert!(node.lat_lon_f64().is_none());
+    /// ```
+    fn set_lat_lon<LL, L1, L2>(&mut self, loc: LL) -> Result<(), ParseLatLonError>
+        where L1: TryInto<Lat>, L2: TryInto<Lon>, LL: Into<Option<(L1, L2)>>,
+            ParseLatLonError: From<<L1 as TryInto<Lat>>::Error>,
+            ParseLatLonError: From<<L2 as TryInto<Lon>>::Error>
+    {
+        let ll: Option<(L1, L2)> = loc.into();
+        match ll {
+            None => self.set_lat_lon_direct(None),
+            Some((l1, l2)) => {
+                let l1: Lat = l1.try_into()?;
+                let l2: Lon = l2.try_into()?;
+                self.set_lat_lon_direct(Some((l1, l2)));
+            },
+        }
+        Ok(())
+    }
 }
 
 /// A Way

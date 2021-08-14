@@ -18,7 +18,7 @@ impl From<RcNode> for StringNode {
         n.set_timestamp(obj.timestamp().clone());
         n.set_uid(obj.uid());
         n.set_user(obj.user());
-        n.set_lat_lon(obj.lat_lon());
+        n.set_lat_lon_direct(obj.lat_lon());
 
         for (k, v) in obj.tags() {
             n.set_tag(k, v);
