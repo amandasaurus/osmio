@@ -508,7 +508,7 @@ pub trait OSMReader {
     type R: Read;
     type Obj: OSMObj;
 
-    fn new(Self::R) -> Self;
+    fn new(_: Self::R) -> Self;
 
     #[allow(unused_variables)]
     fn set_sorted_assumption(&mut self, sorted_assumption: bool) {}
@@ -610,7 +610,7 @@ impl std::error::Error for OSMWriteError {}
 /// A generic writer for OSM objects.
 pub trait OSMWriter<W: Write> {
     /// Create a writer from an underying writer
-    fn new(W) -> Self;
+    fn new(_: W) -> Self;
 
     /// Close this writer, cannot write any more objects.
     /// Some fileformats have certain 'end of file' things. After you write those, you cannot write
