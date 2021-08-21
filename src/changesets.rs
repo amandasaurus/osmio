@@ -1,6 +1,8 @@
 #![allow(warnings)]
 use super::*;
 use xml_rs::reader::{EventReader, Events, XmlEvent};
+use xml_rs::attribute::{OwnedAttribute};
+use xml_rs::name::{OwnedName};
 use std::io::{BufReader, Read};
 use bzip2::Compression;
 use bzip2::read::{BzEncoder, BzDecoder};
@@ -67,21 +69,33 @@ impl<R: Read> ChangesetReader<R> {
         // tags
         let mut tags = HashMap::new();
         loop {
-            let next = self.parser.peek();
-            if let None = next {
-                return None;
+            let next = self.parser.next().unwrap();
+            if let Ok(XmlEvent::EndElement{ ref name }) = next {
+                if name.local_name == "changeset" {
+                    // all done;
+                    break;
+                }
             }
-            if let 
-            match self.parser.peek() {
-                None => { return None; }
-                el @ Some(Ok(XmlEvent)) => {
-                    dbg!(&el);
-                },
-                _ => { self.parser.next(); }
+            if let Ok(XmlEvent::StartElement{ ref name, ref attributes, .. }) = next {
+                if name.local_name == "tag" {
+                    let k = attributes.iter().filter_map(|a| {
+                          if let &OwnedAttribute{ name: OwnedName{ ref local_name, .. }, ref value } = a { 
+                          if local_name == "k" { return Some(value.to_owned()) }
+                        }
+                        return None;
+                    }
+                    ).next().unwrap();
+                    let v = attributes.iter().filter_map(|a| {
+                          if let &OwnedAttribute{ name: OwnedName{ ref local_name, .. }, ref value } = a { 
+                          if local_name == "v" { return Some(value.to_owned()) }
+                        }
+                        return None;
+                    }
+                    ).next().unwrap();
+                    tags.insert(k, v);
+                }
             }
         }
-
-
 
         let changeset = Changeset {
             id: id,
@@ -116,15 +130,15 @@ mod tests {
 
     #[test]
     fn changeset_files() {
-        let mut f = File::open("/slowdisk/amanda/osm/data/changeset-examples.osm.bz2").unwrap();
+        let mut f = File::open("/home/amanda/code/rust/osmio/changeset-examples.osm.bz2").unwrap();
         let mut dec = BzDecoder::new(f);
         let mut osc = ChangesetReader::new(dec);
         let c = osc.next().unwrap();
+        assert_eq!(c.id, 2);
         assert_eq!(c.tags.len(), 0);
-        dbg!(&c);
         let c = osc.next().unwrap();
-        dbg!(&c);
-        assert_eq!(c.tags.len(), 2);
+        assert_eq!(c.id, 98870265);
+        assert_eq!(c.tags.len(), 5);
         assert!(osc.next().is_none());
     }
 
