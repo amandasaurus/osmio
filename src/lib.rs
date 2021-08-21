@@ -8,6 +8,7 @@ extern crate quick_xml;
 extern crate xml as xml_rs;
 #[macro_use]
 extern crate derive_builder;
+extern crate bzip2;
 
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
@@ -33,6 +34,8 @@ pub mod obj_types;
 
 #[cfg(test)]
 mod tests;
+
+mod changesets;
 
 /// OSM id of object
 pub type ObjId = i64;
@@ -502,6 +505,7 @@ pub trait OSMObj: OSMObjBase {
         self.object_type() == OSMObjectType::Relation
     }
 }
+
 
 /// A Generic reader that reads OSM objects
 pub trait OSMReader {

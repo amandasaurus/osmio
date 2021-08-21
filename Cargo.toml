@@ -16,3 +16,5 @@ chrono = "0.4.9"
 separator = "0.4.1"
 derive_builder = "0.10.2"
 quick-xml = "0.22.0"
+
+bzip2 = "0.4"

@@ -109,7 +109,7 @@ pub struct XMLWriter<W: Write> {
 }
 
 #[allow(unused_variables)]
-fn extract_attrs(x: &mut XmlEvent) -> Option<&mut Vec<OwnedAttribute>> {
+pub(crate) fn extract_attrs(x: &mut XmlEvent) -> Option<&mut Vec<OwnedAttribute>> {
     match *x {
         XmlEvent::StartElement {
             ref name,
@@ -120,7 +120,7 @@ fn extract_attrs(x: &mut XmlEvent) -> Option<&mut Vec<OwnedAttribute>> {
     }
 }
 
-fn get_xml_attribute<'a>(attrs: &mut Vec<OwnedAttribute>, key: &str) -> Option<String> {
+pub(crate) fn get_xml_attribute<'a>(attrs: &mut Vec<OwnedAttribute>, key: &str) -> Option<String> {
     attrs
         .iter()
         .position(|attr| attr.name.local_name == key)
