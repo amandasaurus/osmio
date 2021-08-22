@@ -22,11 +22,22 @@ fn main() -> Result<()> {
     ensure!(!sqlite_filename.exists(), "Sqlite filename {} already exists", sqlite_filename.to_str().unwrap());
     let mut conn = Connection::open(sqlite_filename)?;
 
+    let _tag_columns = [
+        "imagery_used",
+        "locale",
+        "source",
+        "host",
+        "changesets_count",
+    ];
+
     conn.execute(
         "CREATE TABLE changeset_tags (
                   id              INTEGER PRIMARY KEY,
-                  created_by            TEXT NOT NULL,
-                  comment            TEXT NOT NULL,
+                  imagery_used            TEXT NOT NULL,
+                  locale            TEXT NOT NULL,
+                  source            TEXT NOT NULL,
+                  host            TEXT NOT NULL,
+                  changesets_count            TEXT NOT NULL,
                   other_tags            TEXT NOT NULL
           )",
         [],
@@ -42,8 +53,13 @@ fn main() -> Result<()> {
     let mut tag_popularity: HashMap<String, usize> = HashMap::new();
     let mut num_changesets = 0;
     let mut num_changesets_with_tags = 0;
-    let mut tag_created_by;
-    let mut tag_comment;
+
+    let mut imagery_used;
+    let mut locale;
+    let mut source;
+    let mut host;
+    let mut changesets_count;
+
     for (state, changeset_res) in osc.into_iter().optional_progress(10000).assume_size(110_000_000) {
         if let Some(state) = state {
             state.do_every_n_sec(2., |state| {
@@ -59,8 +75,13 @@ fn main() -> Result<()> {
 
         cid = changeset.id as usize;
         all_tags = changeset.into_tags();
-        tag_created_by = all_tags.remove("created_by").unwrap_or_else(|| "".to_string());
-        tag_comment = all_tags.remove("comment").unwrap_or_else(|| "".to_string());
+
+        imagery_used = all_tags.remove("imagery_used").unwrap_or_else(|| "".to_string());
+        locale = all_tags.remove("locale").unwrap_or_else(|| "".to_string());
+        source = all_tags.remove("source").unwrap_or_else(|| "".to_string());
+        host = all_tags.remove("host").unwrap_or_else(|| "".to_string());
+        changesets_count = all_tags.remove("changesets_count").unwrap_or_else(|| "".to_string());
+
         tags = all_tags.into_iter().collect();
         for (k, _) in tags.iter() {
             if !tag_popularity.contains_key(k) {
@@ -73,8 +94,8 @@ fn main() -> Result<()> {
         serde_json::to_writer(&mut tags_json, &tags)?;
 
         txn.execute(
-            "INSERT INTO changeset_tags (id, created_by, comment, other_tags) VALUES (?1, ?2, ?3, ?4)",
-            params![cid, tag_created_by, tag_comment, tags_json],
+            "INSERT INTO changeset_tags (id, imagery_used, locale, source, host, changesets_count, other_tags) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![cid, imagery_used, locale, source, host, changesets_count, tags_json],
         )?;
 
 
