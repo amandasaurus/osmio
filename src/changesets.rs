@@ -1,18 +1,9 @@
-#![allow(warnings)]
 use super::*;
-use xml_rs::reader::{EventReader, Events, XmlEvent};
-use xml_rs::attribute::{OwnedAttribute};
-use xml_rs::name::{OwnedName};
-use quick_xml::Reader;
 use quick_xml::events::Event;
 use std::io::{BufReader, Read};
-use bzip2::Compression;
-use bzip2::read::{BzEncoder, BzDecoder, MultiBzDecoder};
-use std::iter::Peekable;
-use crate::xml::{get_xml_attribute, extract_attrs};
-use std::io::prelude::*;
+use bzip2::read::MultiBzDecoder;
 use std::fs::*;
-use anyhow::{anyhow, bail, ensure};
+use anyhow::{bail, ensure};
 
 #[derive(Debug,Builder)]
 pub struct Changeset {
@@ -78,7 +69,7 @@ impl<R: Read> ChangesetReader<R> {
 
     fn next_changeset(&mut self) -> Result<Option<Changeset>> {
         // move forward until we are at a changeset tag (happens at the start)
-        let mut changeset = None;
+        let changeset;
         loop {
             match self.reader.read_event(&mut self.buf)? {
                 Event::Eof => { return Ok(None); },
@@ -189,15 +180,15 @@ impl<R: Read> Iterator for ChangesetReader<R> {
 
 impl ChangesetReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
     pub fn from_filename(filename: &str) -> Result<Self> {
-        let mut f = File::open(filename)?;
-        let mut dec = MultiBzDecoder::new(f);
+        let f = File::open(filename)?;
+        let dec = MultiBzDecoder::new(f);
         
         Ok(ChangesetReader::new(dec))
     }
 }
 
 pub fn changeset_file_to_tags(filename: &str) -> Result<Vec<Vec<(String, String)>>> {
-    let mut osc = ChangesetReader::from_filename(filename)?;
+    let osc = ChangesetReader::from_filename(filename)?;
     let mut results = Vec::new();
     let mut cid;
     let mut tags;
