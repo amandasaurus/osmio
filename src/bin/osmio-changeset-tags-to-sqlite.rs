@@ -107,7 +107,7 @@ fn main() -> Result<()> {
     tag_popularity.sort();
     tag_popularity.reverse();
     for (num, key) in tag_popularity.iter().take(100) {
-        if num*100 < num_changesets_with_tags {
+        if num*1000 < num_changesets_with_tags {
             break;
         }
         println!("{:>8} {:>3}% all {:>3}% tagged {}", num, (num*100)/num_changesets, (num*100)/num_changesets_with_tags, key);
