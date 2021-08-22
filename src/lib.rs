@@ -9,6 +9,7 @@ extern crate xml as xml_rs;
 #[macro_use]
 extern crate derive_builder;
 extern crate bzip2;
+extern crate anyhow;
 
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
@@ -19,6 +20,8 @@ use std::io::{Read, Write};
 use std::iter::{ExactSizeIterator, Iterator};
 use std::str::FromStr;
 use utils::{epoch_to_iso, iso_to_epoch};
+
+use anyhow::Result;
 
 #[macro_use]
 pub mod utils;
@@ -35,7 +38,7 @@ pub mod obj_types;
 #[cfg(test)]
 mod tests;
 
-mod changesets;
+pub mod changesets;
 
 /// OSM id of object
 pub type ObjId = i64;
