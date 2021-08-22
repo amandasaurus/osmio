@@ -247,22 +247,3 @@ impl ChangesetReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
         Ok(ChangesetReader::new(dec))
     }
 }
-
-pub fn changeset_file_to_tags(filename: &str) -> Result<Vec<Vec<(String, String)>>> {
-    let osc = ChangesetReader::from_filename(filename)?;
-    let mut results = Vec::new();
-    let mut cid;
-    let mut tags;
-    let mut changeset;
-    for changeset_res in osc.into_iter() {
-        changeset = changeset_res?;
-        cid = changeset.id as usize;
-        tags = changeset.into_tags();
-        if results.len() <= cid {
-            results.resize(cid + 1, Vec::new());
-        }
-        results[cid] = tags.into_iter().collect();
-    }
-
-    Ok(results)
-}
