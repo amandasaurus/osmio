@@ -12,15 +12,18 @@ use std::iter::Peekable;
 use crate::xml::{get_xml_attribute, extract_attrs};
 use std::io::prelude::*;
 use std::fs::*;
-use anyhow::anyhow;
+use anyhow::{anyhow, bail, ensure};
 
-#[derive(Debug)]
+#[derive(Debug,Builder)]
 pub struct Changeset {
     pub id: u32,
     pub created: TimestampFormat,
+    #[builder(setter(strip_option), default)]
     pub closed: Option<TimestampFormat>,
     pub open: bool,
+    #[builder(setter(strip_option), default)]
     pub uid: Option<i64>,
+    #[builder(setter(strip_option), default)]
     pub user: Option<String>,
     pub tags: HashMap<String, String>,
     pub num_changes: u64,
@@ -75,82 +78,104 @@ impl<R: Read> ChangesetReader<R> {
 
     fn next_changeset(&mut self) -> Result<Option<Changeset>> {
         // move forward until we are at a changeset tag (happens at the start)
+        let mut changeset = None;
         loop {
-            match self.parser.peek() {
-                None => { return Ok(None); },
-                Some(Err(e)) => { return Err(e.clone().into()); }
-                Some(Ok(XmlEvent::StartElement { ref name, .. })) => {
-                    if name.local_name.as_str() == "changeset" {
-                        break;
-                    } else {
-                        self.parser.next();
+            match self.reader.read_event(&mut self.buf)? {
+                Event::Eof => { return Ok(None); },
+                Event::Start(ref e) => {
+                    if e.name() != "changeset".as_bytes() {
+                        continue;
                     }
-                },
-                _ => { self.parser.next(); }
-            }
-        }
 
+                    let mut changeset_builder = ChangesetBuilder::default();
+                    for attr in e.attributes() {
+                        let attr = attr?;
+                        match attr.key {
+                            b"id" => { changeset_builder.id(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            b"created_at" => { changeset_builder.created(TimestampFormat::ISOString(attr.unescape_and_decode_value(&self.reader)?)); },
+                            b"closed_at" => { changeset_builder.closed(TimestampFormat::ISOString(attr.unescape_and_decode_value(&self.reader)?)); },
+                            b"open" => { changeset_builder.open(match attr.value.as_ref() { b"true"=> true, b"false"=>false, _=> bail!("unknown value")}); },
+                            b"user" => { changeset_builder.user(attr.unescape_and_decode_value(&self.reader)?); }
+                            b"uid" => { changeset_builder.uid(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            b"num_changes" => { changeset_builder.num_changes(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            b"comments_count" => { changeset_builder.comments_count(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            _ => {},
+                        }
+                        //dbg!(attr);
+                    }
 
-        let mut changeset_el = self.parser.next().unwrap()?;
-        let mut attrs = extract_attrs(&mut changeset_el).ok_or(anyhow!("no atts"))?;
-        let id = get_xml_attribute(attrs, "id").ok_or(anyhow!("required xml attribute {} not found. attributes: {:?}", "id", attrs))?.parse()?;
+                    // go for tags
+                    let mut tags = HashMap::new();
+                    let mut buf = Vec::new();
+                    loop {
+                        match self.reader.read_event(&mut buf)? {
+                            Event::End(ref e) => {
+                                if e.name() == "changeset".as_bytes() {
+                                    break;
+                                }
+                            },
+                            Event::Start(ref e) | Event::Empty(ref e) => {
+                                if e.name() != "tag".as_bytes() {
+                                    continue;
+                                }
+                                let mut k = None;
+                                let mut v = None;
+                                for attr in e.attributes() {
+                                    let attr = attr?;
+                                    match attr.key {
+                                        b"k" => { k = Some(attr.unescape_and_decode_value(&self.reader)?); },
+                                        b"v" => { v = Some(attr.unescape_and_decode_value(&self.reader)?); },
+                                        _ => {},
+                                    }
+                                }
+                                ensure!(k.is_some(), "No k for tag");
+                                ensure!(v.is_some(), "No v for tag");
+                                tags.insert(k.unwrap(), v.unwrap());
+                            },
+                            _ => continue,
+                        }
+                    }
 
+                    changeset_builder.tags(tags);
 
-        let mut att = |key: &str| -> Result<String> {
-            get_xml_attribute(attrs, key).ok_or(anyhow!("required xml attribute {} not found. changeset id {} attributes: {:?}", key, id, attrs))
-        };
-        let created = TimestampFormat::ISOString(att("created_at")?);
-        let closed = att("closed_at").ok().map_or(None, |v| Some(TimestampFormat::ISOString(v)));
-        let open = att("open")?.parse()?;
-        let uid = att("uid").ok().map(|v| v.parse()).transpose()?;
-        let user = att("user").ok().map(|v| v.parse()).transpose()?;
-        let num_changes = att("num_changes")?.parse()?;
-        let comments_count = att("comments_count")?.parse()?;
-
-        // tags
-        let mut tags = HashMap::new();
-        loop {
-            let next = self.parser.next().unwrap();
-            if let Ok(XmlEvent::EndElement{ ref name }) = next {
-                if name.local_name == "changeset" {
-                    // all done;
+                    changeset = Some(changeset_builder.build()?);
                     break;
-                }
-            }
-            if let Ok(XmlEvent::StartElement{ ref name, ref attributes, .. }) = next {
-                if name.local_name == "tag" {
-                    let k = attributes.iter().filter_map(|a| {
-                          if let &OwnedAttribute{ name: OwnedName{ ref local_name, .. }, ref value } = a { 
-                          if local_name == "k" { return Some(value.to_owned()) }
-                        }
-                      None
+                },
+                Event::Empty(ref e) => {
+                    if e.name() != "changeset".as_bytes() {
+                        continue;
                     }
-                    ).next().unwrap();
-                    let v = attributes.iter().filter_map(|a| {
-                          if let &OwnedAttribute{ name: OwnedName{ ref local_name, .. }, ref value } = a { 
-                          if local_name == "v" { return Some(value.to_owned()) }
+
+                    let mut changeset_builder = ChangesetBuilder::default();
+                    for attr in e.attributes() {
+                        let attr = attr?;
+                        match attr.key {
+                            b"id" => { changeset_builder.id(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            b"created_at" => { changeset_builder.created(TimestampFormat::ISOString(attr.unescape_and_decode_value(&self.reader)?)); },
+                            b"closed_at" => { changeset_builder.closed(TimestampFormat::ISOString(attr.unescape_and_decode_value(&self.reader)?)); },
+                            b"open" => { changeset_builder.open(match attr.value.as_ref() { b"true"=> true, b"false"=>false, _=> bail!("unknown value")}); },
+                            b"user" => { changeset_builder.user(attr.unescape_and_decode_value(&self.reader)?); }
+                            b"uid" => { changeset_builder.uid(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            b"num_changes" => { changeset_builder.num_changes(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            b"comments_count" => { changeset_builder.comments_count(self.reader.decode(&attr.unescaped_value()?)?.parse()?); },
+                            _ => {},
                         }
-                        None
+                        //dbg!(attr);
                     }
-                    ).next().unwrap();
-                    tags.insert(k, v);
-                }
+
+                    // no tags here
+                    changeset_builder.tags(HashMap::new());
+
+                    changeset = Some(changeset_builder.build()?);
+                    break;
+                },
+                _ => continue,
+                //e => { dbg!(e); continue; },
             }
         }
 
-        let changeset = Changeset {
-            id: id,
-            created: created,
-            closed: closed,
-            open: open,
-            uid: uid,
-            user: user,
-            tags: tags,
-            num_changes: num_changes,
-            comments_count: comments_count,
-        };
-
-        Ok(Some(changeset))
+        ensure!(changeset.is_some(), "No changeset created?!");
+        Ok(Some(changeset.unwrap()))
     }
 }
 
