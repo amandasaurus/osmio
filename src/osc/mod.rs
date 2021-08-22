@@ -1,13 +1,13 @@
 //! OSC File format
 
 use super::version;
-use super::{OSMObjectType, Node, OSMObj, Relation, Way};
+use super::{Node, OSMObj, OSMObjectType, Relation, Way};
 use super::{OSMReader, OSMWriteError, OSMWriter};
 use obj_types::StringOSMObj;
 use std::io::{BufReader, Read, Write};
 use std::iter::Iterator;
 
-use xml::{xml_elements_to_osm_obj, write_xml_escaped};
+use xml::{write_xml_escaped, xml_elements_to_osm_obj};
 
 use xml_rs::reader::{EventReader, Events, XmlEvent};
 
@@ -91,7 +91,6 @@ impl<R: Read> OSMReader for OSCReader<R> {
 }
 
 impl<W: Write> OSCWriter<W> {
-
     fn ensure_header(&mut self) -> Result<(), OSMWriteError> {
         if self._state == State::Initial {
             write!(self.writer, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")?;
@@ -116,7 +115,6 @@ impl<W: Write> OSCWriter<W> {
 }
 
 impl<W: Write> OSMWriter<W> for OSCWriter<W> {
-
     fn new(writer: W) -> Self {
         OSCWriter {
             writer: writer,
@@ -133,7 +131,6 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
         self.ensure_header()?;
 
         if self._state != State::Closed {
-
             write!(self.writer, "\n</modify>")?;
             write!(self.writer, "\n</osmChange>")?;
 
@@ -142,7 +139,6 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
 
         Ok(())
     }
-
 
     fn write_obj(&mut self, obj: &impl OSMObj) -> Result<(), OSMWriteError> {
         match self._state {

@@ -8,8 +8,8 @@ extern crate quick_xml;
 extern crate xml as xml_rs;
 #[macro_use]
 extern crate derive_builder;
-extern crate bzip2;
 extern crate anyhow;
+extern crate bzip2;
 
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
@@ -58,7 +58,7 @@ macro_rules! lat_lon_impl {
         /// of [`COORD_PRECISION_NANOS`].
         ///
         /// This gives us 7 decimal places of precision - the same precision that OSM uses.
-        /// 
+        ///
         /// ```
         /// use std::convert::TryFrom;
         /// use osmio::Lat;
@@ -88,7 +88,7 @@ macro_rules! lat_lon_impl {
             /// Returns the number of degrees as a 64-bit float.
             ///
             /// Note: The actual precision is [`COORD_PRECISION_NANOS`], which is less than
-            /// 64-bits. It is derived from an inner i32 representation, which mirrors the 
+            /// 64-bits. It is derived from an inner i32 representation, which mirrors the
             /// precision used by OpenStreetMap.org
             pub fn degrees(&self) -> f64 {
                 self.0 as f64 / COORD_SCALE_FACTOR
@@ -330,7 +330,6 @@ pub trait Node: OSMObjBase {
     /// Latitude & Longitude of the node as `f64` (if it's set)
     fn lat_lon_f64(&self) -> Option<(f64, f64)> {
         self.lat_lon().map(|(lat, lon)| (lat.into(), lon.into()))
-
     }
     /// True iff this node has latitude & longitude set
     fn has_lat_lon(&self) -> bool {
@@ -341,7 +340,6 @@ pub trait Node: OSMObjBase {
     fn unset_lat_lon(&mut self) {
         self.set_lat_lon_direct(None);
     }
-
 
     /// Directly set the lat & lon of the node, see `set_lat_lon()` as a more convienient method.
     fn set_lat_lon_direct(&mut self, loc: Option<(Lat, Lon)>);
@@ -367,9 +365,12 @@ pub trait Node: OSMObjBase {
     /// assert!(node.lat_lon_f64().is_none());
     /// ```
     fn set_lat_lon<LL, L1, L2>(&mut self, loc: LL) -> Result<(), ParseLatLonError>
-        where L1: TryInto<Lat>, L2: TryInto<Lon>, LL: Into<Option<(L1, L2)>>,
-            ParseLatLonError: From<<L1 as TryInto<Lat>>::Error>,
-            ParseLatLonError: From<<L2 as TryInto<Lon>>::Error>
+    where
+        L1: TryInto<Lat>,
+        L2: TryInto<Lon>,
+        LL: Into<Option<(L1, L2)>>,
+        ParseLatLonError: From<<L1 as TryInto<Lat>>::Error>,
+        ParseLatLonError: From<<L2 as TryInto<Lon>>::Error>,
     {
         let ll: Option<(L1, L2)> = loc.into();
         match ll {
@@ -378,7 +379,7 @@ pub trait Node: OSMObjBase {
                 let l1: Lat = l1.try_into()?;
                 let l2: Lon = l2.try_into()?;
                 self.set_lat_lon_direct(Some((l1, l2)));
-            },
+            }
         }
         Ok(())
     }
@@ -508,7 +509,6 @@ pub trait OSMObj: OSMObjBase {
         self.object_type() == OSMObjectType::Relation
     }
 }
-
 
 /// A Generic reader that reads OSM objects
 pub trait OSMReader {

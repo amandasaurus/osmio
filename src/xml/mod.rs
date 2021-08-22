@@ -517,7 +517,11 @@ mod tests {
     assert_escape!(escape5, "&&foo", "&amp;&amp;foo");
     assert_escape!(escape6, "&ergio", "&amp;ergio");
     assert_escape!(escape7, "foo & bar", "foo &amp; bar");
-    assert_escape!(escape8, "foo & bar \" ' <whoop>", "foo &amp; bar &quot; &apos; &lt;whoop&gt;");
+    assert_escape!(
+        escape8,
+        "foo & bar \" ' <whoop>",
+        "foo &amp; bar &quot; &apos; &lt;whoop&gt;"
+    );
 
     macro_rules! assert_write_obj {
         ( $name:ident, $input:expr, $output:expr ) => {
@@ -548,5 +552,4 @@ mod tests {
 			.unwrap(),
 	    format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n\t<node id=\"1\" visible=\"true\" version=\"2\" user=\"&amp;foo\" uid=\"1\" changeset=\"1\" timestamp=\"1970-01-01T00:11:40Z\" lat=\"0\" lon=\"0\" />\n</osm>\n</osm>", crate::version())
 	);
-
 }
