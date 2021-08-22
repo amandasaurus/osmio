@@ -3,6 +3,8 @@ use super::*;
 use xml_rs::reader::{EventReader, Events, XmlEvent};
 use xml_rs::attribute::{OwnedAttribute};
 use xml_rs::name::{OwnedName};
+use quick_xml::Reader;
+use quick_xml::events::Event;
 use std::io::{BufReader, Read};
 use bzip2::Compression;
 use bzip2::read::{BzEncoder, BzDecoder, MultiBzDecoder};
@@ -58,14 +60,16 @@ impl Changeset {
 
 pub struct ChangesetReader<R: Read>
 {
-    parser: Peekable<Events<BufReader<R>>>,
+    reader: quick_xml::Reader<BufReader<R>>,
+    buf: Vec<u8>
 }
 
 impl<R: Read> ChangesetReader<R> {
 
     fn new(reader: R) -> ChangesetReader<R> {
         ChangesetReader {
-            parser: EventReader::new(BufReader::new(reader)).into_iter().peekable(),
+            reader: quick_xml::Reader::from_reader(BufReader::new(reader)),
+            buf: Vec::new(),
         }
     }
 
