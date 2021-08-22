@@ -9,7 +9,7 @@ use rusqlite::{params, Connection};
 use std::collections::HashMap;
 
 use anyhow::{ensure, Result};
-use osmio::changesets::ChangesetReader;
+use osmio::changesets::{ChangesetTagReader};
 use std::env::args;
 use std::path::PathBuf;
 
@@ -17,7 +17,8 @@ fn main() -> Result<()> {
     let changeset_filename = args().nth(1).expect("provide osc filename as arg 1");
     let sqlite_filename = PathBuf::from(args().nth(2).expect("provide sqlite filename as arg 1"));
 
-    let osc = ChangesetReader::from_filename(&changeset_filename)?;
+    //let osc = ChangesetReader::from_filename(&changeset_filename)?;
+    let osc = ChangesetTagReader::from_filename(&changeset_filename)?;
 
     ensure!(
         !sqlite_filename.exists(),
@@ -37,11 +38,11 @@ fn main() -> Result<()> {
     conn.execute(
         "CREATE TABLE changeset_tags (
                   id              INTEGER PRIMARY KEY,
-                  imagery_used            TEXT NOT NULL,
-                  locale            TEXT NOT NULL,
-                  source            TEXT NOT NULL,
-                  host            TEXT NOT NULL,
-                  changesets_count            TEXT NOT NULL,
+                  -- imagery_used            TEXT NOT NULL,
+                  -- locale            TEXT NOT NULL,
+                  -- source            TEXT NOT NULL,
+                  -- host            TEXT NOT NULL,
+                  -- changesets_count            TEXT NOT NULL,
                   other_tags            TEXT NOT NULL
           )",
         [],
@@ -50,19 +51,17 @@ fn main() -> Result<()> {
     let txn = conn.transaction()?;
 
     let mut cid;
-    let mut all_tags: HashMap<String, String>;
     let mut tags: Vec<(String, String)>;
     let mut tags_json: Vec<u8> = Vec::new();
     let mut changeset;
     let mut tag_popularity: HashMap<String, usize> = HashMap::new();
-    let mut num_changesets = 0;
     let mut num_changesets_with_tags = 0;
 
-    let mut imagery_used;
-    let mut locale;
-    let mut source;
-    let mut host;
-    let mut changesets_count;
+    //let mut imagery_used;
+    //let mut locale;
+    //let mut source;
+    //let mut host;
+    //let mut changesets_count;
 
     for (state, changeset_res) in osc
         .into_iter()
@@ -84,26 +83,22 @@ fn main() -> Result<()> {
             });
         }
         changeset = changeset_res?;
-        num_changesets += 1;
-        if changeset.tags.is_empty() {
-            continue;
-        }
+        cid = changeset.0;
+        tags = changeset.1;
         num_changesets_with_tags += 1;
 
-        cid = changeset.id as usize;
-        all_tags = changeset.into_tags();
 
-        imagery_used = all_tags
-            .remove("imagery_used")
-            .unwrap_or_else(|| "".to_string());
-        locale = all_tags.remove("locale").unwrap_or_else(|| "".to_string());
-        source = all_tags.remove("source").unwrap_or_else(|| "".to_string());
-        host = all_tags.remove("host").unwrap_or_else(|| "".to_string());
-        changesets_count = all_tags
-            .remove("changesets_count")
-            .unwrap_or_else(|| "".to_string());
+        //imagery_used = all_tags
+        //    .remove("imagery_used")
+        //    .unwrap_or_else(|| "".to_string());
+        //locale = all_tags.remove("locale").unwrap_or_else(|| "".to_string());
+        //source = all_tags.remove("source").unwrap_or_else(|| "".to_string());
+        //host = all_tags.remove("host").unwrap_or_else(|| "".to_string());
+        //changesets_count = all_tags
+        //    .remove("changesets_count")
+        //    .unwrap_or_else(|| "".to_string());
+        //tags = all_tags.into_iter().collect();
 
-        tags = all_tags.into_iter().collect();
         for (k, _) in tags.iter() {
             if !tag_popularity.contains_key(k) {
                 tag_popularity.insert(k.to_owned(), 1);
@@ -115,15 +110,17 @@ fn main() -> Result<()> {
         serde_json::to_writer(&mut tags_json, &tags)?;
 
         txn.execute(
-            "INSERT INTO changeset_tags (id, imagery_used, locale, source, host, changesets_count, other_tags) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![cid, imagery_used, locale, source, host, changesets_count, tags_json],
+            //"INSERT INTO changeset_tags (id, imagery_used, locale, source, host, changesets_count, other_tags) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            //params![cid, imagery_used, locale, source, host, changesets_count, tags_json],
+            "INSERT INTO changeset_tags (id, other_tags) VALUES (?1, ?2)",
+            params![cid, tags_json],
         )?;
     }
     txn.commit()?;
 
     println!(
         "Inserted {} changesets, and got {} unique tags",
-        num_changesets,
+        num_changesets_with_tags,
         tag_popularity.len()
     );
     let mut tag_popularity = tag_popularity
@@ -137,9 +134,8 @@ fn main() -> Result<()> {
             break;
         }
         println!(
-            "{:>8} {:>3}% all {:>3}% tagged {}",
+            "{:>8} {:>3}% tagged {}",
             num,
-            (num * 100) / num_changesets,
             (num * 100) / num_changesets_with_tags,
             key
         );

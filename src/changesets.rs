@@ -247,3 +247,98 @@ impl ChangesetReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
         Ok(ChangesetReader::new(dec))
     }
 }
+
+pub struct ChangesetTagReader<R: Read> {
+    reader: quick_xml::Reader<BufReader<R>>,
+    curr_id: Option<u64>,
+    tags: Vec<(String, String)>,
+}
+
+impl ChangesetTagReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
+    pub fn from_filename(filename: &str) -> Result<Self> {
+        let f = File::open(filename)?;
+        let dec = MultiBzDecoder::new(f);
+
+        Ok(ChangesetTagReader::new(dec))
+    }
+}
+
+
+impl<R: Read> ChangesetTagReader<R> {
+    fn new(reader: R) -> Self {
+        ChangesetTagReader {
+            reader: quick_xml::Reader::from_reader(BufReader::new(reader)),
+            curr_id: None,
+            tags: Vec::new(),
+        }
+    }
+
+    fn next_tag(&mut self) -> Result<Option<(u64, Vec<(String, String)>)>> {
+        let mut buf = Vec::new();
+        loop {
+            match self.reader.read_event(&mut buf)? {
+                Event::Eof => {
+                    return Ok(None);
+                },
+                Event::End(ref e) => {
+                    if e.name() ==  b"changeset" {
+                        ensure!(self.curr_id.is_some(), "Should be an id set");
+
+                        return Ok(Some((self.curr_id.unwrap(), std::mem::take(&mut self.tags))));
+                    }
+                },
+                Event::Start(ref e) if e.name() == b"changeset" => {
+                    for attr in e.attributes() {
+                        let attr = attr?;
+                        if attr.key == b"id" {
+                            self.curr_id = Some(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                        }
+                    }
+                    self.tags.truncate(0);
+                },
+                Event::Start(ref e)|Event::Empty(ref e) if e.name() == b"tag" => {
+                    let mut k = None;
+                    let mut v = None;
+                    for attr in e.attributes() {
+                        let attr = attr?;
+                        match attr.key {
+                            b"k" => {
+                                k = Some(attr.unescape_and_decode_value(&self.reader)?);
+                            },
+                            b"v" => {
+                                v = Some(attr.unescape_and_decode_value(&self.reader)?);
+                            },
+                            _ => continue,
+                        }
+                    }
+                    ensure!(k.is_some(), "No k for tag");
+                    ensure!(v.is_some(), "No v for tag");
+                    self.tags.push((k.unwrap(), v.unwrap()));
+                },
+                _ => continue,
+            }
+        }
+    }
+}
+
+impl<R: Read> Iterator for ChangesetTagReader<R> {
+    type Item = Result<(u64, Vec<(String, String)>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_tag().transpose()
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn changeset_files() {
+        let mut osc = ChangesetTagReader::from_filename("/home/amanda/code/rust/osmio/changeset-examples.osm.bz2").unwrap();
+        dbg!(osc.next_tag().unwrap());
+    }
+
+}
+
