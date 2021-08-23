@@ -48,8 +48,10 @@ fn main() -> Result<()> {
         [],
     )?;
 
+
     let txn = conn.transaction()?;
 
+    let mut stmt = txn.prepare("INSERT INTO changeset_tags (id, other_tags) VALUES (?1, ?2)")?;
     let mut cid;
     let mut tags: Vec<(String, String)>;
     let mut tags_json: Vec<u8> = Vec::new();
@@ -109,13 +111,15 @@ fn main() -> Result<()> {
         tags_json.truncate(0);
         serde_json::to_writer(&mut tags_json, &tags)?;
 
-        txn.execute(
-            //"INSERT INTO changeset_tags (id, imagery_used, locale, source, host, changesets_count, other_tags) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            //params![cid, imagery_used, locale, source, host, changesets_count, tags_json],
-            "INSERT INTO changeset_tags (id, other_tags) VALUES (?1, ?2)",
-            params![cid, tags_json],
-        )?;
+        stmt.execute(params![cid, tags_json])?;
+        //txn.execute(
+        //    //"INSERT INTO changeset_tags (id, imagery_used, locale, source, host, changesets_count, other_tags) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        //    //params![cid, imagery_used, locale, source, host, changesets_count, tags_json],
+        //    "INSERT INTO changeset_tags (id, other_tags) VALUES (?1, ?2)",
+        //    params![cid, tags_json],
+        //)?;
     }
+    drop(stmt);
     txn.commit()?;
 
     println!(
