@@ -1,6 +1,21 @@
 //! Changeset dump files
 //!
 //! Parses the `changesets-latest.osm.bz2` changeset dump file from [https://planet.openstreetmap.org/planet/changesets-latest.osm.bz2](https://planet.openstreetmap.org/planet/changesets-latest.osm.bz2)
+//!
+//! Download a changeset dump:
+//! ```sh
+//! $ aria2c --seed-time 0 https://planet.openstreetmap.org/planet/changesets-latest.osm.bz2.torrent
+//! ```
+//!
+//! Parse & read it:
+//!
+//! ```rust
+//! let mut reader = ChangesetReader::from_filename("changesets-latest.osm.bz2")?;
+//! for changeset in reader {
+//!    ...
+//! }
+//! ```
+//!
 //! 
 //! The `ChangesetReader` reads the file fully, but `ChangesetTagReader` is optimized to just
 //! return the tags
@@ -258,11 +273,11 @@ impl ChangesetReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
     }
 }
 
-/// Reads the `changesets-latest.osm.bz2` file and produces tuples of (id, tags) for every (tagged) changesets.
+/// Reads the `changesets-latest.osm.bz2` file and produces tuples of (id, tags) `(u64, Vec<(String, String)>)` for every (tagged) changesets.
 ///
 /// Can be quicker than parsing all data.
 ///
-/// Create it with `ChangesetTagReader::from_filename("changesets-latest.osm.bz2")?`
+/// Create it with `ChangesetTagReader::from_filename("changesets-latest.osm.bz2")`
 pub struct ChangesetTagReader<R: Read> {
     reader: quick_xml::Reader<BufReader<R>>,
     curr_id: Option<u64>,
