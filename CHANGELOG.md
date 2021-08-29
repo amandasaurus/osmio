@@ -1,4 +1,4 @@
-# Unreleased
+# v0.6.0 (2021-08-29)
 
 * Added conveniece methods to make Node lat/lons easier to work with & more
   ergonomic
