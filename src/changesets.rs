@@ -9,7 +9,7 @@
 //!
 //! Parse & read it:
 //!
-//! ```rust
+//! ```rust,ignore
 //! let mut reader = ChangesetReader::from_filename("changesets-latest.osm.bz2")?;
 //! for changeset in reader {
 //!    ...

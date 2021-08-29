@@ -1,4 +1,4 @@
-//! Read and write OpenStreetMap fileformats
+//! Read and write OpenStreetMap files
 //!
 extern crate byteorder;
 extern crate chrono;
@@ -40,7 +40,7 @@ mod tests;
 
 pub mod changesets;
 
-/// OSM id of object
+/// Type that stores the OSM Id
 pub type ObjId = i64;
 
 /// How many nanodegrees are represented by each unit in [`Lat::inner()`].
@@ -210,6 +210,10 @@ impl From<std::num::ParseFloatError> for ParseLatLonError {
     }
 }
 
+/// Timestamps can be stored as an ISO formatted string, or number of seconds since unix epoch
+///
+/// In XML files, timestamps are represented as ISO strings, and in PBF files, as integer seconds
+/// since the epoch
 #[derive(Debug, Clone, Eq, Ord)]
 pub enum TimestampFormat {
     ISOString(String),
@@ -427,6 +431,7 @@ pub trait Relation: OSMObjBase {
     );
 }
 
+/// A Node, Way or Relation
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OSMObjectType {
     Node,
@@ -480,9 +485,13 @@ impl std::str::FromStr for OSMObjectType {
     }
 }
 
+/// Something which could be any one of the possible OSM objects
 pub trait OSMObj: OSMObjBase {
+    /// The type of the Node type
     type Node: Node;
+    /// The type of the Way type
     type Way: Way;
+    /// The type of the Relation type
     type Relation: Relation;
 
     fn object_type(&self) -> OSMObjectType;
@@ -569,7 +578,7 @@ pub trait OSMReader {
     //}
 }
 
-// FIXME does this have to be public? Can I make it private?
+/// Something that produces OSMObjects
 pub struct OSMObjectIterator<'a, R>
 where
     R: OSMReader + 'a,
@@ -661,6 +670,8 @@ pub trait OSMWriter<W: Write> {
 }
 
 /// The version string of this library.
+///
+/// calls the "CARGO_PKG_VERSION"
 pub fn version<'a>() -> &'a str {
     option_env!("CARGO_PKG_VERSION").unwrap_or("unknown-non-cargo-build")
 }
