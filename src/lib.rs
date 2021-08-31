@@ -16,7 +16,9 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::io::{Read, Write};
+use std::io::{Read, Write, BufReader};
+use std::fs::File;
+use std::path::Path;
 use std::iter::{ExactSizeIterator, Iterator};
 use std::str::FromStr;
 use utils::{epoch_to_iso, iso_to_epoch};
@@ -678,4 +680,12 @@ pub trait OSMWriter<W: Write> {
 /// calls the "CARGO_PKG_VERSION"
 pub fn version<'a>() -> &'a str {
     option_env!("CARGO_PKG_VERSION").unwrap_or("unknown-non-cargo-build")
+}
+
+pub enum GenericOSMReader {
+    PBF(pbf::PBFReader<BufReader<File>>),
+}
+
+pub fn read(filename: impl AsRef<Path>) -> Result<GenericOSMReader> {
+    Ok(GenericOSMReader::PBF(pbf::PBFReader::from_filename(filename)?))
 }

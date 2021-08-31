@@ -479,6 +479,14 @@ pub struct PBFReader<R: Read> {
     _sorted_assumption: bool,
 }
 
+impl PBFReader<BufReader<File>> {
+    pub fn from_filename(filename: impl AsRef<Path>) -> Result<Self> {
+        let filename: &Path = filename.as_ref();
+        Ok(Self::new(BufReader::new(File::open(filename)?)))
+    }
+
+}
+
 impl<R: Read> OSMReader for PBFReader<R> {
     type R = R;
     type Obj = ArcOSMObj;
