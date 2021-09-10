@@ -682,10 +682,7 @@ pub fn version<'a>() -> &'a str {
     option_env!("CARGO_PKG_VERSION").unwrap_or("unknown-non-cargo-build")
 }
 
-pub enum GenericOSMReader {
-    PBF(pbf::PBFReader<BufReader<File>>),
-}
-
-pub fn read(filename: impl AsRef<Path>) -> Result<GenericOSMReader> {
-    Ok(GenericOSMReader::PBF(pbf::PBFReader::from_filename(filename)?))
+pub fn read_pbf(filename: impl AsRef<Path>) -> Result<pbf::PBFReader<BufReader<File>>>
+{
+    Ok(pbf::PBFReader::from_filename(filename)?)
 }
