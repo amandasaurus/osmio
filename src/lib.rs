@@ -425,6 +425,7 @@ pub trait Relation: OSMObjBase {
     );
 }
 
+/// Either 'Node', 'Way' or 'Relation'
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OSMObjectType {
     Node,
@@ -478,6 +479,7 @@ impl std::str::FromStr for OSMObjectType {
     }
 }
 
+/// A generic trait, with all the functions that all osm objects have
 pub trait OSMObj: OSMObjBase {
     type Node: Node;
     type Way: Way;
