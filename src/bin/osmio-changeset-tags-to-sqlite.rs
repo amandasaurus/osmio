@@ -9,7 +9,7 @@ use rusqlite::{params, Connection};
 use std::collections::HashMap;
 
 use anyhow::{ensure, Result};
-use osmio::changesets::{ChangesetTagReader};
+use osmio::changesets::ChangesetTagReader;
 use std::env::args;
 use std::path::PathBuf;
 
@@ -47,7 +47,6 @@ fn main() -> Result<()> {
           )",
         [],
     )?;
-
 
     let txn = conn.transaction()?;
 
@@ -88,7 +87,6 @@ fn main() -> Result<()> {
         cid = changeset.0;
         tags = changeset.1;
         num_changesets_with_tags += 1;
-
 
         //imagery_used = all_tags
         //    .remove("imagery_used")
