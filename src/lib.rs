@@ -16,10 +16,10 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::io::{Read, Write, BufReader};
 use std::fs::File;
-use std::path::Path;
+use std::io::{BufReader, Read, Write};
 use std::iter::{ExactSizeIterator, Iterator};
+use std::path::Path;
 use std::str::FromStr;
 use utils::{epoch_to_iso, iso_to_epoch};
 
@@ -682,7 +682,12 @@ pub fn version<'a>() -> &'a str {
     option_env!("CARGO_PKG_VERSION").unwrap_or("unknown-non-cargo-build")
 }
 
-pub fn read_pbf(filename: impl AsRef<Path>) -> Result<pbf::PBFReader<BufReader<File>>>
-{
+pub fn read_pbf(filename: impl AsRef<Path>) -> Result<pbf::PBFReader<BufReader<File>>> {
     Ok(pbf::PBFReader::from_filename(filename)?)
+}
+
+pub fn read_xml(
+    filename: impl AsRef<Path>,
+) -> Result<xml::XMLReader<bzip2::read::MultiBzDecoder<std::fs::File>>> {
+    Ok(xml::from_filename_bz2(filename)?)
 }

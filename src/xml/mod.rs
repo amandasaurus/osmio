@@ -5,17 +5,54 @@ use super::ObjId;
 use super::TimestampFormat;
 use super::{Node, OSMObj, OSMObjectType, Relation, Way};
 use super::{OSMReader, OSMWriteError, OSMWriter};
+use bzip2::read::MultiBzDecoder;
 use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::iter::Iterator;
+use std::path::Path;
 
+use anyhow::Result;
 use xml_rs::attribute::OwnedAttribute;
 use xml_rs::reader::{EventReader, Events, XmlEvent};
 
 pub struct XMLReader<R: Read> {
     parser: Events<BufReader<R>>,
 }
+
+pub fn from_filename_bz2(
+    filename: impl AsRef<Path>,
+) -> Result<XMLReader<bzip2::read::MultiBzDecoder<std::fs::File>>> {
+    let filename: &Path = filename.as_ref();
+    let f = File::open(filename)?;
+    let dec = MultiBzDecoder::new(f);
+    Ok(XMLReader::new(dec))
+}
+pub fn from_filename_uncompressed(
+    filename: impl AsRef<Path>,
+) -> Result<XMLReader<BufReader<File>>> {
+    let filename: &Path = filename.as_ref();
+    Ok(XMLReader::new(BufReader::new(File::open(filename)?)))
+}
+
+/*
+ * TODO, fix this
+pub fn from_filename(filename: impl AsRef<Path>) -> Result<XMLReader<dyn Read>>> {
+    match filename.as_ref().to_str() {
+        None => { anyhow::bail!("filename {:?} cannot automatically determine whether this is compressed or not, call from_filename_bz2(…) or from_filename_uncompressed(…) directly", filename); },
+        Some(s) => {
+            if s.ends_with(".osm.bz2") {
+                from_filename_bz2(s)
+            } else if s.ends_with(".osm") {
+                from_filename_uncompressed(s)
+            } else {
+                anyhow::bail!("filename {:?} cannot automatically determine whether this is compressed or not, call from_filename_bz2(…) or from_filename_uncompressed(…) directly", filename)
+                }
+        },
+    }
+}
+*/
 
 pub(crate) fn write_xml_escaped(writer: &mut impl Write, s: &str) -> std::io::Result<()> {
     for c in s.chars() {

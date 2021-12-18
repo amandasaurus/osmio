@@ -484,7 +484,6 @@ impl PBFReader<BufReader<File>> {
         let filename: &Path = filename.as_ref();
         Ok(Self::new(BufReader::new(File::open(filename)?)))
     }
-
 }
 
 impl<R: Read> OSMReader for PBFReader<R> {
