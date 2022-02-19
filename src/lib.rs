@@ -599,6 +599,7 @@ where
     pub fn inner(&self) -> &R {
         self.inner
     }
+
 }
 
 impl<'a, R> Iterator for OSMObjectIterator<'a, R>
@@ -682,10 +683,12 @@ pub fn version<'a>() -> &'a str {
     option_env!("CARGO_PKG_VERSION").unwrap_or("unknown-non-cargo-build")
 }
 
+/// Opens a PBF filename
 pub fn read_pbf(filename: impl AsRef<Path>) -> Result<pbf::PBFReader<BufReader<File>>> {
     Ok(pbf::PBFReader::from_filename(filename)?)
 }
 
+/// Opens a bzip2 filename
 pub fn read_xml(
     filename: impl AsRef<Path>,
 ) -> Result<xml::XMLReader<bzip2::read::MultiBzDecoder<std::fs::File>>> {
