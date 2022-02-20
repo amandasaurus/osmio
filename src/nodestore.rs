@@ -1,3 +1,4 @@
+//! Currently unused local experimentation
 use crate::{Lat, Lon};
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};

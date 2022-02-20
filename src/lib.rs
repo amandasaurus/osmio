@@ -1,5 +1,15 @@
 //! Read and write OpenStreetMap files
 //!
+//! # Reading files
+//!
+//! ```rust
+//! use osmio::prelude::*;
+//!
+//! let reader = osmio::read_pbf("path/to/filename.osm.pbf")?;
+//! for obj in reader.objects() {
+//!     ...
+//! }
+//! ```
 extern crate byteorder;
 extern crate chrono;
 extern crate flate2;
@@ -55,6 +65,7 @@ pub const COORD_PRECISION_NANOS: i32 = 100;
 pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f64;
 
 pub mod prelude {
+    //! Useful things for osmio
     pub use crate::OSMReader;
 }
 
@@ -527,9 +538,12 @@ pub trait OSMObj: OSMObjBase {
 
 /// A Generic reader that reads OSM objects
 pub trait OSMReader {
+    /// The underlying `std::io::Read`.
     type R: Read;
+    /// The type of OSM Object that this returns
     type Obj: OSMObj;
 
+    /// Create this reader from a `std::io::Read`.
     fn new(_: Self::R) -> Self;
 
     #[allow(unused_variables)]
@@ -548,10 +562,13 @@ pub trait OSMReader {
     /// Convert to the underlying reader
     fn into_inner(self) -> Self::R;
 
+    /// Reference to the inner
     fn inner(&self) -> &Self::R;
 
+    /// Returns the next OSM Object in this reader
     fn next(&mut self) -> Option<Self::Obj>;
 
+    /// Returns an iterator over the objects in this reader.
     fn objects<'a>(&'a mut self) -> OSMObjectIterator<'a, Self>
     where
         Self: Sized,
@@ -585,6 +602,8 @@ pub trait OSMReader {
 }
 
 /// Something that produces OSMObjects
+///
+/// Created by `OSMReader::objects`
 pub struct OSMObjectIterator<'a, R>
 where
     R: OSMReader + 'a,

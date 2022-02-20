@@ -1,3 +1,4 @@
+//! Misc local utilities
 use chrono::{offset::Utc, DateTime, NaiveDateTime};
 
 pub fn epoch_to_iso(epoch: i32) -> String {

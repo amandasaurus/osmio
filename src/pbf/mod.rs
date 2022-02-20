@@ -1,4 +1,6 @@
 //! PBF/Protobuf file format
+//!
+//! Reading PBF files. Writing/creating PBF files is not currently supported or implemented
 use super::OSMReader;
 use super::ObjId;
 use super::TimestampFormat;
@@ -473,6 +475,7 @@ impl<R: Read> Iterator for FileReader<R> {
     }
 }
 
+/// A thing that read PBF files
 pub struct PBFReader<R: Read> {
     filereader: FileReader<R>,
     _buffer: Vec<ArcOSMObj>,
@@ -480,6 +483,7 @@ pub struct PBFReader<R: Read> {
 }
 
 impl PBFReader<BufReader<File>> {
+    /// Creates a PBF Reader from a path.
     pub fn from_filename(filename: impl AsRef<Path>) -> Result<Self> {
         let filename: &Path = filename.as_ref();
         Ok(Self::new(BufReader::new(File::open(filename)?)))

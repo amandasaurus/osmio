@@ -1,3 +1,4 @@
+//! Currently unused local experimentation
 use super::ObjId;
 use std::io::Cursor;
 use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};

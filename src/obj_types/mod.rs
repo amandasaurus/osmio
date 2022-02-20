@@ -1,3 +1,4 @@
+//! Different ways to store OSM Objects
 mod arc_types;
 mod rc_types;
 mod string_types;
