@@ -52,6 +52,10 @@ pub const COORD_PRECISION_NANOS: i32 = 100;
 /// See [`COORD_PRECISION_NANOS`].
 pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f64;
 
+pub mod prelude {
+    pub use crate::OSMReader;
+}
+
 macro_rules! lat_lon_impl {
     ($lat_or_lon: ident) => {
         /// Latitude and Longitude are stored internally as a 32-bit signed integer, in units
