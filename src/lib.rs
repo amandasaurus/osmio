@@ -2,13 +2,14 @@
 //!
 //! # Reading files
 //!
-//! ```rust
+//! ```no_run
 //! use osmio::prelude::*;
 //!
-//! let reader = osmio::read_pbf("path/to/filename.osm.pbf")?;
+//! let mut reader = osmio::read_pbf("path/to/filename.osm.pbf")?;
 //! for obj in reader.objects() {
-//!     ...
+//!     // ...
 //! }
+//! # Ok::<(), anyhow::Error>(())
 //! ```
 extern crate byteorder;
 extern crate chrono;
