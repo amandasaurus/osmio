@@ -20,7 +20,7 @@ macro_rules! func_call_inner_set {
     };
 }
 
-#[derive(PartialEq, Debug, Builder, Clone)]
+#[derive(PartialEq, Debug, Builder, Clone, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
 pub struct StringNode {
     pub(crate) _id: ObjId,
@@ -46,7 +46,7 @@ pub struct StringNode {
     pub(crate) _lat_lon: Option<(Lat, Lon)>,
 }
 
-#[derive(PartialEq, Debug, Builder, Clone)]
+#[derive(PartialEq, Debug, Builder, Clone, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
 pub struct StringWay {
     pub(crate) _id: ObjId,
@@ -70,7 +70,7 @@ pub struct StringWay {
     pub(crate) _nodes: Vec<ObjId>,
 }
 
-#[derive(PartialEq, Debug, Builder, Clone)]
+#[derive(PartialEq, Debug, Builder, Clone, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
 pub struct StringRelation {
     pub(crate) _id: ObjId,
@@ -94,7 +94,7 @@ pub struct StringRelation {
     pub(crate) _members: Vec<(OSMObjectType, ObjId, String)>,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum StringOSMObj {
     Node(StringNode),
     Way(StringWay),

@@ -21,7 +21,9 @@ extern crate xml as xml_rs;
 extern crate derive_builder;
 extern crate anyhow;
 extern crate bzip2;
+extern crate serde;
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
@@ -85,7 +87,7 @@ macro_rules! lat_lon_impl {
         /// let float_lat: f64 = lat.into();
         /// assert_eq!(float_lat, 1.);
         /// ```
-        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
         pub struct $lat_or_lon(i32);
 
         impl $lat_or_lon {
@@ -233,7 +235,7 @@ impl From<std::num::ParseFloatError> for ParseLatLonError {
 ///
 /// In XML files, timestamps are represented as ISO strings, and in PBF files, as integer seconds
 /// since the epoch
-#[derive(Debug, Clone, Eq, Ord)]
+#[derive(Debug, Clone, Eq, Ord, Serialize, Deserialize)]
 pub enum TimestampFormat {
     ISOString(String),
     EpochNunber(i64),
@@ -451,7 +453,7 @@ pub trait Relation: OSMObjBase {
 }
 
 /// A Node, Way or Relation
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum OSMObjectType {
     Node,
     Way,
