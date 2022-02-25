@@ -1,3 +1,11 @@
+# v0.7.0 (2022-02-25)
+
+* Add a `prelude` to make it easier to use
+* Add `osmio::read_pbf`/`_bz2` to easily read file paths
+* Can convert from Arc\* → String\* objects
+* Improve doc comments, modernise style & formatting
+* Many objects now derive serde's Serialize & Deserialize
+
 # v0.6.0 (2021-08-29)
 
 * Added conveniece methods to make Node lat/lons easier to work with & more
