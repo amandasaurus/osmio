@@ -149,7 +149,6 @@ impl From<ArcRelation> for StringRelation {
     }
 }
 
-
 impl From<ArcOSMObj> for StringOSMObj {
     fn from(obj: ArcOSMObj) -> Self {
         match obj {

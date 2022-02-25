@@ -65,10 +65,10 @@ pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f
 
 pub mod prelude {
     //! Useful things for osmio
-    pub use crate::OSMReader;
-    pub use crate::OSMObjectType;
     pub use crate::OSMObj;
-    pub use crate::{Node, Way, Relation};
+    pub use crate::OSMObjectType;
+    pub use crate::OSMReader;
+    pub use crate::{Node, Relation, Way};
 }
 
 macro_rules! lat_lon_impl {
@@ -620,7 +620,6 @@ where
     pub fn inner(&self) -> &R {
         self.inner
     }
-
 }
 
 impl<'a, R> Iterator for OSMObjectIterator<'a, R>
