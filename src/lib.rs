@@ -67,6 +67,8 @@ pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f
 pub mod prelude {
     //! Useful things for osmio
     pub use crate::OSMReader;
+    pub use crate::OSMObjectType;
+    pub use crate::{Node, Way, Relation};
 }
 
 macro_rules! lat_lon_impl {
