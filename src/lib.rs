@@ -38,8 +38,6 @@ use anyhow::Result;
 #[macro_use]
 pub mod utils;
 
-pub mod nodestore;
-
 pub mod pbf;
 pub mod xml;
 //pub mod opl;

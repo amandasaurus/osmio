@@ -93,8 +93,8 @@ fn decode_string(s: &str) -> Result<String, DecodeStringError> {
             if c == '%' {
                 looking_for_percent = false;
                 let hex_string: String = buffer.into_iter().collect();
-                let codepoint: u32 = try!(u32::from_str_radix(hex_string.as_str(), 16).or(Err(DecodeStringError)));
-                let new_char: char = try!(::std::char::from_u32(codepoint).ok_or(DecodeStringError));
+                let codepoint: u32 = u32::from_str_radix(hex_string.as_str(), 16).or(Err(DecodeStringError))?;
+                let new_char: char = ::std::char::from_u32(codepoint).ok_or(DecodeStringError)?;
                 output.push(new_char);
                 buffer = Vec::new();
             } else {
@@ -130,8 +130,8 @@ fn decode_tags(line: &str) -> Result<HashMap<Rc<String>, Rc<String>>, DecodeStri
     let mut result: HashMap<Rc<String>, Rc<String>> = HashMap::new();
     for kv in line.split(",") {
         let kv: Vec<_> = kv.splitn(2, "=").collect();
-        let k = Rc::new(try!(decode_string(kv[0])));
-        let v = Rc::new(try!(decode_string(kv[1])));
+        let k = Rc::new(decode_string(kv[0])?);
+        let v = Rc::new(decode_string(kv[1])?);
         result.insert(k, v);
     }
     Ok(result)
@@ -146,7 +146,7 @@ fn encode_tags(tags: &HashMap<Rc<String>, Rc<String>>) -> String {
 fn decode_way_nodes(line: &str) -> Result<Vec<ObjId>, DecodeStringError> {
     let mut result: Vec<ObjId> = Vec::new();
     for x in line.split(",").map(|x| { x.chars().skip(1).collect::<String>() }) {
-        let node_id = try!(x.parse::<ObjId>().or(Err(DecodeStringError)));
+        let node_id = x.parse::<ObjId>().or(Err(DecodeStringError))?;
         result.push(node_id);
     }
     Ok(result)
@@ -159,11 +159,11 @@ fn encode_way_nodes(nodes: &Vec<ObjId>) -> String {
 fn decode_members(line: &str) -> Result<Vec<(char, ObjId, Rc<String>)>, DecodeStringError> {
     let mut result = Vec::new();
     for x in line.split(",") {
-        let (obj_type, rest) = try!(split_key_value(x));
-        let obj_type = try!(obj_type.chars().next().ok_or(DecodeStringError));
+        let (obj_type, rest) = split_key_value(x)?;
+        let obj_type = obj_type.chars().next().ok_or(DecodeStringError)?;
         let rest: Vec<_> = rest.splitn(2, "@").collect();
         let (id, role) = (rest[0], rest[1]);
-        let id: ObjId = try!(id.parse().or(Err(DecodeStringError)));
+        let id: ObjId = id.parse().or(Err(DecodeStringError))?;
         result.push((obj_type, id, Rc::new(role.to_string())));
     }
     Ok(result)
@@ -205,7 +205,7 @@ pub fn decode_line(line: &str) -> Result<OSMObj, DecodeStringError> {
     
     match items[0].0 {
         "n" => {
-            let tags = try!(decode_tags(items[7].1));
+            let tags = decode_tags(items[7].1)?;
             let lon = if items[8].1.len() == 0 { None } else { Some(try!(items[8].1.parse::<Lon>().or(Err(DecodeStringError)))) };
             let lat = if items[9].1.len() == 0 { None } else { Some(try!(items[9].1.parse::<Lat>().or(Err(DecodeStringError)))) };
 
@@ -224,10 +224,10 @@ pub fn decode_line(line: &str) -> Result<OSMObj, DecodeStringError> {
             Ok(OSMObj::Node(node))
         },
         "w" => {
-            let tags = try!(decode_tags(items[7].1));
-            let nodes = try!(decode_way_nodes(items[8].1));
+            let tags = decode_tags(items[7].1)?;
+            let nodes = decode_way_nodes(items[8].1)?;
             let way = Way {
-                id: try!(items[0].1.parse::<ObjId>().or(Err(DecodeStringError))),
+                id: items[0].1.parse::<ObjId>().or(Err(DecodeStringError))?;
                 version: Some(items[1].1.parse::<u32>().or(Err(DecodeStringError))?),
                 deleted: items[2].1 == "D",
                 changeset_id: Some(items[3].1.parse::<u32>().or(Err(DecodeStringError))?),
