@@ -67,6 +67,7 @@ pub mod prelude {
     //! Useful things for osmio
     pub use crate::OSMReader;
     pub use crate::OSMObjectType;
+    pub use crate::OSMObj;
     pub use crate::{Node, Way, Relation};
 }
 
