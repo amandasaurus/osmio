@@ -11,7 +11,7 @@ fn main() {
     let io = BufReader::new(File::open(filename).expect("Couldn't open file"));
     let mut osc_reader = OSCReader::new(io);
 
-    for o in osc_reader.objects() {
+    for o in osc_reader.elements() {
         dbg!(o);
     }
 }

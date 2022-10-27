@@ -20,7 +20,7 @@ fn main() {
     let mut num_objects: u64 = 0;
     let mut last_print = start;
 
-    for _ in pbf_reader.objects() {
+    for _ in pbf_reader.elements() {
         if num_objects % 1_000 == 0 {
             let now = Instant::now();
             let duration = now - last_print;

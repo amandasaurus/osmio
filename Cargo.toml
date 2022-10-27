@@ -6,6 +6,7 @@ keywords = ["openstreetmap", "osm"]
 license = "AGPL-3.0"
 repository = "https://github.com/amandasaurus/osmio/"
 description = "Read and write OpenStreetMap data files"
+edition = "2021"
 
 [dependencies]
 xml-rs = "0.8.0"

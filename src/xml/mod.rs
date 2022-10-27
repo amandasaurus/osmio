@@ -5,8 +5,10 @@ use super::ObjId;
 use super::TimestampFormat;
 use super::{Node, OSMObj, OSMObjectType, Relation, Way};
 use super::{OSMReader, OSMWriteError, OSMWriter};
+use crate::obj_types::{
+    StringBounds, StringNode, StringOSMEle, StringOSMObj, StringRelation, StringWay,
+};
 use bzip2::read::MultiBzDecoder;
-use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
@@ -70,7 +72,7 @@ pub(crate) fn write_xml_escaped(writer: &mut impl Write, s: &str) -> std::io::Re
 
 impl<R: Read> OSMReader for XMLReader<R> {
     type R = R;
-    type Obj = StringOSMObj;
+    type Ele = StringOSMEle;
 
     fn new(reader: R) -> XMLReader<R> {
         XMLReader {
@@ -86,7 +88,7 @@ impl<R: Read> OSMReader for XMLReader<R> {
         todo!("{} {} XMLReader inner()", file!(), line!());
     }
 
-    fn next(&mut self) -> Option<StringOSMObj> {
+    fn next(&mut self) -> Option<Self::Ele> {
         let mut elements = Vec::new();
 
         // Pull xml/sax elements from the xml parser into a vector so we know what to work with.
@@ -104,13 +106,13 @@ impl<R: Read> OSMReader for XMLReader<R> {
             let mut should_break = false;
             match el {
                 XmlEvent::StartElement { ref name, .. } => match name.local_name.as_str() {
-                    "node" | "way" | "relation" => {
+                    "bounds" | "node" | "way" | "relation" => {
                         should_push = true;
                     }
                     _ => {}
                 },
                 XmlEvent::EndElement { ref name, .. } => match name.local_name.as_str() {
-                    "node" | "way" | "relation" => {
+                    "bounds" | "node" | "way" | "relation" => {
                         should_break = true;
                     }
                     _ => {}
@@ -239,16 +241,30 @@ fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, String)> {
     result
 }
 
-pub(crate) fn xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
+pub(crate) fn xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMEle> {
     match els.first() {
         Some(&XmlEvent::StartElement { ref name, .. }) => match name.local_name.as_str() {
-            "node" => node_xml_elements_to_osm_obj(els),
-            "way" => way_xml_elements_to_osm_obj(els),
-            "relation" => relation_xml_elements_to_osm_obj(els),
+            "bounds" => bounds_xml_elements_to_osm_obj(els).map(StringOSMEle::Bounds),
+            "node" => node_xml_elements_to_osm_obj(els).map(StringOSMEle::Object),
+            "way" => way_xml_elements_to_osm_obj(els).map(StringOSMEle::Object),
+            "relation" => relation_xml_elements_to_osm_obj(els).map(StringOSMEle::Object),
             _ => None,
         },
         _ => None,
     }
+}
+
+fn bounds_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringBounds> {
+    let xml = els.first_mut()?;
+    let attrs = extract_attrs(xml)?;
+    let minlat = get_xml_attribute(attrs, "minlat")?.parse().ok()?;
+    let minlon = get_xml_attribute(attrs, "minlon")?.parse().ok()?;
+    let maxlat = get_xml_attribute(attrs, "maxlat")?.parse().ok()?;
+    let maxlon = get_xml_attribute(attrs, "maxlon")?.parse().ok()?;
+    Some(StringBounds {
+        min: (minlat, minlon),
+        max: (maxlat, maxlon),
+    })
 }
 
 fn node_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {

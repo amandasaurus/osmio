@@ -3,12 +3,10 @@
 use super::version;
 use super::{Node, OSMObj, OSMObjectType, Relation, Way};
 use super::{OSMReader, OSMWriteError, OSMWriter};
-use obj_types::StringOSMObj;
+use crate::obj_types::StringOSMEle;
+use crate::xml::{write_xml_escaped, xml_elements_to_osm_obj};
 use std::io::{BufReader, Read, Write};
 use std::iter::Iterator;
-
-use xml::{write_xml_escaped, xml_elements_to_osm_obj};
-
 use xml_rs::reader::{EventReader, Events, XmlEvent};
 
 pub struct OSCReader<R: Read> {
@@ -30,7 +28,7 @@ pub struct OSCWriter<W: Write> {
 
 impl<R: Read> OSMReader for OSCReader<R> {
     type R = R;
-    type Obj = StringOSMObj;
+    type Ele = StringOSMEle;
 
     fn new(reader: R) -> Self {
         OSCReader {
@@ -46,7 +44,7 @@ impl<R: Read> OSMReader for OSCReader<R> {
         todo!("{} {} OSCReader inner()", file!(), line!());
     }
 
-    fn next(&mut self) -> Option<StringOSMObj> {
+    fn next(&mut self) -> Option<Self::Ele> {
         let mut elements = Vec::new();
 
         // Pull xml/sax elements from the xml parser into a vector so we know what to work with.

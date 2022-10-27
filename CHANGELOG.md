@@ -1,3 +1,13 @@
+# Unreleased
+
+* Read bounds from xml:
+  * BREAKING: Replace `OSCReader::Obj` with `OSMReader::Ele`
+  * BREAKING: Replace `OSMReader::objects()` with `OSMReader::elements()`
+  * BREAKING: Change the return type of `OSMReader::next()` to `Option&lt;Self::Ele&gt;`
+  * BREAKING: Replace `OSMObjectIterator` with `OSMElementIterator`
+  * Add `OSMEle` to contains bounds and object
+  * Add `ArcBounds`, `ArcOSMEle`, `StringBounds`, `StringOSMEle`
+
 # v0.7.0 (2022-02-25)
 
 * Add a `prelude` to make it easier to use

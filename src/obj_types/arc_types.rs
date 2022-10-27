@@ -64,6 +64,37 @@ pub struct ArcRelation {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
+pub struct ArcBounds {
+    pub min: (Lat, Lon),
+    pub max: (Lat, Lon),
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum ArcOSMEle {
+    Bounds(ArcBounds),
+    Object(ArcOSMObj),
+}
+
+impl OSMEle for ArcOSMEle {
+    type Bounds = ArcBounds;
+    type Obj = ArcOSMObj;
+
+    fn bounds(&self) -> Option<&<Self as OSMEle>::Bounds> {
+        match self {
+            ArcOSMEle::Bounds(bounds) => Some(bounds),
+            ArcOSMEle::Object(_obj) => None,
+        }
+    }
+
+    fn object(&self) -> Option<&Self::Obj> {
+        match self {
+            ArcOSMEle::Bounds(_bounds) => None,
+            ArcOSMEle::Object(obj) => Some(obj),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum ArcOSMObj {
     Node(ArcNode),
     Way(ArcWay),

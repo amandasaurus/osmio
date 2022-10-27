@@ -89,17 +89,22 @@ mod timestamp_format {
 
 #[test]
 fn area_ways() {
-    use crate::{obj_types::StringOSMObj, xml::XMLReader};
+    use crate::{obj_types::StringOSMEle, obj_types::StringOSMObj, xml::XMLReader};
 
     macro_rules! assert_closed_area {
         ($input: expr, $expect_is_closed: expr, $expect_is_area: expr) => {
             let mut reader = XMLReader::new($input.as_bytes());
             let mut found = false;
-            for obj in reader.objects() {
-                if let StringOSMObj::Way(osm_way) = obj {
-                    found = true;
-                    assert_eq!($expect_is_closed, osm_way.is_closed());
-                    assert_eq!($expect_is_area, osm_way.is_area());
+            for ele in reader.elements() {
+                match ele {
+                    StringOSMEle::Bounds(_bounds) => {}
+                    StringOSMEle::Object(obj) => {
+                        if let StringOSMObj::Way(osm_way) = obj {
+                            found = true;
+                            assert_eq!($expect_is_closed, osm_way.is_closed());
+                            assert_eq!($expect_is_area, osm_way.is_area());
+                        }
+                    }
                 }
             }
             assert!(found, "no Ways were found");

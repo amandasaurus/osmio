@@ -95,6 +95,37 @@ pub struct StringRelation {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
+pub struct StringBounds {
+    pub min: (Lat, Lon),
+    pub max: (Lat, Lon),
+}
+
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
+pub enum StringOSMEle {
+    Bounds(StringBounds),
+    Object(StringOSMObj),
+}
+
+impl OSMEle for StringOSMEle {
+    type Bounds = StringBounds;
+    type Obj = StringOSMObj;
+
+    fn bounds(&self) -> Option<&<Self as OSMEle>::Bounds> {
+        match self {
+            StringOSMEle::Bounds(bounds) => Some(bounds),
+            StringOSMEle::Object(_obj) => None,
+        }
+    }
+
+    fn object(&self) -> Option<&Self::Obj> {
+        match self {
+            StringOSMEle::Bounds(_bounds) => None,
+            StringOSMEle::Object(obj) => Some(obj),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub enum StringOSMObj {
     Node(StringNode),
     Way(StringWay),

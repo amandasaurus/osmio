@@ -15,7 +15,7 @@ use crate::COORD_PRECISION_NANOS;
 
 use flate2::read::ZlibDecoder;
 
-use obj_types::{ArcNode, ArcOSMObj, ArcRelation, ArcWay};
+use obj_types::{ArcNode, ArcOSMEle, ArcOSMObj, ArcRelation, ArcWay};
 
 use protobuf;
 mod fileformat;
@@ -489,7 +489,7 @@ impl PBFReader<BufReader<File>> {
 
 impl<R: Read> OSMReader for PBFReader<R> {
     type R = R;
-    type Obj = ArcOSMObj;
+    type Ele = ArcOSMEle;
 
     fn new(reader: R) -> PBFReader<R> {
         PBFReader {
@@ -514,7 +514,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
         self.filereader.into_inner()
     }
 
-    fn next(&mut self) -> Option<ArcOSMObj> {
+    fn next(&mut self) -> Option<Self::Ele> {
         while self._buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel
@@ -535,6 +535,6 @@ impl<R: Read> OSMReader for PBFReader<R> {
             self._buffer = objs;
         }
 
-        self._buffer.pop()
+        self._buffer.pop().map(ArcOSMEle::Object)
     }
 }

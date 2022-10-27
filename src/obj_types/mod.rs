@@ -3,11 +3,10 @@ mod arc_types;
 mod rc_types;
 mod string_types;
 
-use {Node, OSMObjBase, Relation, Way};
-
 pub use self::arc_types::*;
 pub use self::rc_types::*;
 pub use self::string_types::*;
+use crate::{Node, OSMObjBase, Relation, Way};
 
 impl From<RcNode> for StringNode {
     fn from(obj: RcNode) -> Self {

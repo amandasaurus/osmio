@@ -3,13 +3,15 @@
 //! # Reading files
 //!
 //! ```no_run
+//! # fn main() -> anyhow::Result<()> {
 //! use osmio::prelude::*;
 //!
 //! let mut reader = osmio::read_pbf("path/to/filename.osm.pbf")?;
-//! for obj in reader.objects() {
+//! for obj in reader.elements() {
 //!     // ...
 //! }
-//! # Ok::<(), anyhow::Error>(())
+//! # Ok(())
+//! # }
 //! ```
 extern crate byteorder;
 extern crate chrono;
@@ -535,6 +537,13 @@ impl std::str::FromStr for OSMObjectType {
     }
 }
 
+pub trait OSMEle {
+    type Bounds;
+    type Obj: OSMObj;
+    fn bounds(&self) -> Option<&Self::Bounds>;
+    fn object(&self) -> Option<&Self::Obj>;
+}
+
 /// Something which could be any one of the possible OSM objects
 pub trait OSMObj: OSMObjBase {
     /// The type of the Node type
@@ -573,8 +582,8 @@ pub trait OSMObj: OSMObjBase {
 pub trait OSMReader {
     /// The underlying `std::io::Read`.
     type R: Read;
-    /// The type of OSM Object that this returns
-    type Obj: OSMObj;
+    /// The type of OSM Element that this returns
+    type Ele: OSMEle;
 
     /// Create this reader from a `std::io::Read`.
     fn new(_: Self::R) -> Self;
@@ -599,14 +608,14 @@ pub trait OSMReader {
     fn inner(&self) -> &Self::R;
 
     /// Returns the next OSM Object in this reader
-    fn next(&mut self) -> Option<Self::Obj>;
+    fn next(&mut self) -> Option<Self::Ele>;
 
     /// Returns an iterator over the objects in this reader.
-    fn objects(&mut self) -> OSMObjectIterator<Self>
+    fn elements(&mut self) -> OSMElementIterator<Self>
     where
         Self: Sized,
     {
-        OSMObjectIterator { inner: self }
+        OSMElementIterator { inner: self }
     }
 
     //fn nodes<'a, N: Node>(&'a mut self) -> Box<dyn Iterator<Item=N>+'a> where Self:Sized {
@@ -634,36 +643,26 @@ pub trait OSMReader {
     //}
 }
 
-/// Something that produces OSMObjects
+/// Something that produces OSMElements
 ///
-/// Created by `OSMReader::objects`
-pub struct OSMObjectIterator<'a, R>
+/// Created by `OSMReader::elements`
+pub struct OSMElementIterator<'a, R>
 where
     R: OSMReader + 'a,
 {
     inner: &'a mut R,
 }
 
-impl<'a, R> OSMObjectIterator<'a, R>
+impl<'a, R> Iterator for OSMElementIterator<'a, R>
 where
     R: OSMReader,
 {
-    pub fn inner(&self) -> &R {
-        self.inner
-    }
-}
-
-impl<'a, R> Iterator for OSMObjectIterator<'a, R>
-where
-    R: OSMReader,
-{
-    type Item = R::Obj;
+    type Item = R::Ele;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next()
     }
 }
-
 /// An error when trying to write from an OSMWriter
 #[derive(Debug)]
 pub enum OSMWriteError {
