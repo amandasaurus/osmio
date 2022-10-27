@@ -25,6 +25,7 @@ extern crate serde;
 extern crate serde_json;
 
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
@@ -236,7 +237,7 @@ impl From<std::num::ParseFloatError> for ParseLatLonError {
 ///
 /// In XML files, timestamps are represented as ISO strings, and in PBF files, as integer seconds
 /// since the epoch
-#[derive(Debug, Clone, Eq, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, Serialize, Deserialize)]
 pub enum TimestampFormat {
     ISOString(String),
     EpochNunber(i64),
@@ -244,16 +245,16 @@ pub enum TimestampFormat {
 
 impl TimestampFormat {
     pub fn to_iso_string(&self) -> String {
-        match self {
-            &TimestampFormat::ISOString(ref s) => s.clone(),
-            &TimestampFormat::EpochNunber(ref t) => epoch_to_iso(*t as i32),
+        match *self {
+            TimestampFormat::ISOString(ref s) => s.clone(),
+            TimestampFormat::EpochNunber(ref t) => epoch_to_iso(*t as i32),
         }
     }
 
     pub fn to_epoch_number(&self) -> i64 {
-        match self {
-            &TimestampFormat::ISOString(ref s) => iso_to_epoch(s) as i64,
-            &TimestampFormat::EpochNunber(t) => t,
+        match *self {
+            TimestampFormat::ISOString(ref s) => iso_to_epoch(s) as i64,
+            TimestampFormat::EpochNunber(t) => t,
         }
     }
 }
@@ -286,13 +287,19 @@ impl fmt::Display for TimestampFormat {
 
 impl std::cmp::PartialOrd for TimestampFormat {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl std::cmp::Ord for TimestampFormat {
+    fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (TimestampFormat::ISOString(a), TimestampFormat::ISOString(b)) => a.partial_cmp(b),
-            (TimestampFormat::EpochNunber(a), TimestampFormat::EpochNunber(b)) => a.partial_cmp(b),
-            (a, b) => a.to_epoch_number().partial_cmp(&b.to_epoch_number()),
+            (TimestampFormat::ISOString(a), TimestampFormat::ISOString(b)) => a.cmp(b),
+            (TimestampFormat::EpochNunber(a), TimestampFormat::EpochNunber(b)) => a.cmp(b),
+            (a, b) => a.to_epoch_number().cmp(&b.to_epoch_number()),
         }
     }
 }
+
 impl std::cmp::PartialEq for TimestampFormat {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -595,7 +602,7 @@ pub trait OSMReader {
     fn next(&mut self) -> Option<Self::Obj>;
 
     /// Returns an iterator over the objects in this reader.
-    fn objects<'a>(&'a mut self) -> OSMObjectIterator<'a, Self>
+    fn objects(&mut self) -> OSMObjectIterator<Self>
     where
         Self: Sized,
     {
@@ -729,12 +736,12 @@ pub fn version<'a>() -> &'a str {
 
 /// Opens a PBF filename
 pub fn read_pbf(filename: impl AsRef<Path>) -> Result<pbf::PBFReader<BufReader<File>>> {
-    Ok(pbf::PBFReader::from_filename(filename)?)
+    pbf::PBFReader::from_filename(filename)
 }
 
 /// Opens a bzip2 filename
 pub fn read_xml(
     filename: impl AsRef<Path>,
 ) -> Result<xml::XMLReader<bzip2::read::MultiBzDecoder<std::fs::File>>> {
-    Ok(xml::from_filename_bz2(filename)?)
+    xml::from_filename_bz2(filename)
 }

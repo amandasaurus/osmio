@@ -157,7 +157,7 @@ pub(crate) fn extract_attrs(x: &mut XmlEvent) -> Option<&mut Vec<OwnedAttribute>
     }
 }
 
-pub(crate) fn get_xml_attribute<'a>(attrs: &mut Vec<OwnedAttribute>, key: &str) -> Option<String> {
+pub(crate) fn get_xml_attribute(attrs: &mut Vec<OwnedAttribute>, key: &str) -> Option<String> {
     attrs
         .iter()
         .position(|attr| attr.name.local_name == key)
@@ -168,7 +168,7 @@ pub(crate) fn get_xml_attribute<'a>(attrs: &mut Vec<OwnedAttribute>, key: &str) 
         })
 }
 
-fn get_tags(els: &mut Vec<XmlEvent>) -> HashMap<String, String> {
+fn get_tags(els: &mut [XmlEvent]) -> HashMap<String, String> {
     let mut result = HashMap::new();
     for el in els.iter_mut() {
         if let &mut XmlEvent::StartElement {
@@ -190,7 +190,7 @@ fn get_tags(els: &mut Vec<XmlEvent>) -> HashMap<String, String> {
     result
 }
 
-fn get_nodes(els: &mut Vec<XmlEvent>) -> Vec<ObjId> {
+fn get_nodes(els: &mut [XmlEvent]) -> Vec<ObjId> {
     let mut result = Vec::new();
 
     for el in els.iter_mut() {
@@ -213,7 +213,7 @@ fn get_nodes(els: &mut Vec<XmlEvent>) -> Vec<ObjId> {
     result
 }
 
-fn get_members(els: &mut Vec<XmlEvent>) -> Vec<(OSMObjectType, ObjId, String)> {
+fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, String)> {
     let mut result = Vec::new();
 
     for el in els.iter_mut() {
@@ -228,7 +228,7 @@ fn get_members(els: &mut Vec<XmlEvent>) -> Vec<(OSMObjectType, ObjId, String)> {
                     get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
                 let member_type_o: Option<OSMObjectType> =
                     get_xml_attribute(attributes, "type").and_then(|t| t.parse().ok());
-                let role = get_xml_attribute(attributes, "role").unwrap_or_else(|| String::new());
+                let role = get_xml_attribute(attributes, "role").unwrap_or_default();
                 if let (Some(ref_id), Some(member_type)) = (ref_id_o, member_type_o) {
                     result.push((member_type, ref_id, role));
                 }
@@ -239,7 +239,7 @@ fn get_members(els: &mut Vec<XmlEvent>) -> Vec<(OSMObjectType, ObjId, String)> {
     result
 }
 
-pub(crate) fn xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
+pub(crate) fn xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
     match els.first() {
         Some(&XmlEvent::StartElement { ref name, .. }) => match name.local_name.as_str() {
             "node" => node_xml_elements_to_osm_obj(els),
@@ -251,23 +251,22 @@ pub(crate) fn xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringO
     }
 }
 
-fn node_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
-    let mut attrs = extract_attrs(els.first_mut()?)?;
-    let id: ObjId = get_xml_attribute(&mut attrs, "id").and_then(|x| x.parse().ok())?;
-    let version = get_xml_attribute(&mut attrs, "version").and_then(|x| x.parse().ok());
-    let changeset_id = get_xml_attribute(&mut attrs, "changeset").and_then(|x| x.parse().ok());
-    let timestamp = get_xml_attribute(&mut attrs, "timestamp")
-        .map(|x| TimestampFormat::ISOString(x.to_owned()));
-    let uid = get_xml_attribute(&mut attrs, "uid").and_then(|x| x.parse().ok());
-    let user = get_xml_attribute(&mut attrs, "user");
-    let lat = get_xml_attribute(&mut attrs, "lat")?.parse();
-    let lon = get_xml_attribute(&mut attrs, "lon")?.parse();
+fn node_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
+    let attrs = extract_attrs(els.first_mut()?)?;
+    let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
+    let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
+    let changeset_id = get_xml_attribute(attrs, "changeset").and_then(|x| x.parse().ok());
+    let timestamp = get_xml_attribute(attrs, "timestamp").map(TimestampFormat::ISOString);
+    let uid = get_xml_attribute(attrs, "uid").and_then(|x| x.parse().ok());
+    let user = get_xml_attribute(attrs, "user");
+    let lat = get_xml_attribute(attrs, "lat")?.parse();
+    let lon = get_xml_attribute(attrs, "lon")?.parse();
 
     let lat_lon = match (lat, lon) {
         (Ok(lat), Ok(lon)) => Some((lat, lon)),
         _errs => None,
     };
-    let deleted = get_xml_attribute(&mut attrs, "visible")
+    let deleted = get_xml_attribute(attrs, "visible")
         .and_then(|val| match val.as_str() {
             "true" => Some(false),
             "false" => Some(true),
@@ -290,16 +289,15 @@ fn node_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj>
     }))
 }
 
-fn way_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
-    let mut attrs = extract_attrs(els.first_mut()?)?;
-    let id: ObjId = get_xml_attribute(&mut attrs, "id").and_then(|x| x.parse().ok())?;
-    let version = get_xml_attribute(&mut attrs, "version").and_then(|x| x.parse().ok());
-    let changeset_id = get_xml_attribute(&mut attrs, "changeset").and_then(|x| x.parse().ok());
-    let timestamp = get_xml_attribute(&mut attrs, "timestamp")
-        .map(|x| TimestampFormat::ISOString(x.to_owned()));
-    let uid = get_xml_attribute(&mut attrs, "uid").and_then(|x| x.parse().ok());
-    let user = get_xml_attribute(&mut attrs, "user");
-    let deleted = get_xml_attribute(&mut attrs, "visible")
+fn way_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
+    let attrs = extract_attrs(els.first_mut()?)?;
+    let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
+    let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
+    let changeset_id = get_xml_attribute(attrs, "changeset").and_then(|x| x.parse().ok());
+    let timestamp = get_xml_attribute(attrs, "timestamp").map(TimestampFormat::ISOString);
+    let uid = get_xml_attribute(attrs, "uid").and_then(|x| x.parse().ok());
+    let user = get_xml_attribute(attrs, "user");
+    let deleted = get_xml_attribute(attrs, "visible")
         .and_then(|val| match val.as_str() {
             "true" => Some(false),
             "false" => Some(true),
@@ -322,16 +320,15 @@ fn way_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> 
     }))
 }
 
-fn relation_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
-    let mut attrs = extract_attrs(els.first_mut()?)?;
-    let id: ObjId = get_xml_attribute(&mut attrs, "id").and_then(|x| x.parse().ok())?;
-    let version = get_xml_attribute(&mut attrs, "version").and_then(|x| x.parse().ok());
-    let changeset_id = get_xml_attribute(&mut attrs, "changeset").and_then(|x| x.parse().ok());
-    let timestamp = get_xml_attribute(&mut attrs, "timestamp")
-        .map(|x| TimestampFormat::ISOString(x.to_owned()));
-    let uid = get_xml_attribute(&mut attrs, "uid").and_then(|x| x.parse().ok());
-    let user = get_xml_attribute(&mut attrs, "user");
-    let deleted = get_xml_attribute(&mut attrs, "visible")
+fn relation_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
+    let attrs = extract_attrs(els.first_mut()?)?;
+    let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
+    let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
+    let changeset_id = get_xml_attribute(attrs, "changeset").and_then(|x| x.parse().ok());
+    let timestamp = get_xml_attribute(attrs, "timestamp").map(TimestampFormat::ISOString);
+    let uid = get_xml_attribute(attrs, "uid").and_then(|x| x.parse().ok());
+    let user = get_xml_attribute(attrs, "user");
+    let deleted = get_xml_attribute(attrs, "visible")
         .and_then(|val| match val.as_str() {
             "true" => Some(false),
             "false" => Some(true),
@@ -369,7 +366,7 @@ impl From<std::io::Error> for OSMWriteError {
 impl<W: Write> XMLWriter<W> {
     fn ensure_header(&mut self) -> Result<(), OSMWriteError> {
         if self._state == State::Initial {
-            write!(self.writer, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")?;
+            writeln!(self.writer, "<?xml version=\"1.0\" encoding=\"utf-8\"?>")?;
             write!(
                 self.writer,
                 "<osm version=\"0.6\" generator=\"osmio/{}\"",
@@ -393,7 +390,7 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
     fn new(writer: W) -> Self {
         // TODO have a config that does indentation and stuff
         XMLWriter {
-            writer: writer,
+            writer,
             headers: HashMap::new(),
             _state: State::Initial,
         }
@@ -459,7 +456,7 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             write!(self.writer, " changeset=\"{}\"", changeset_id)?;
         }
         if let Some(timestamp) = obj.timestamp() {
-            write!(self.writer, " timestamp=\"{}\"", timestamp.to_string())?;
+            write!(self.writer, " timestamp=\"{}\"", timestamp)?;
         }
 
         if let Some(node) = obj.as_node() {

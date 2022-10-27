@@ -276,6 +276,8 @@ impl ChangesetReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
     }
 }
 
+type Tags = Vec<(String, String)>;
+
 /// Reads the `changesets-latest.osm.bz2` file and produces tuples of (id, tags) `(u64, Vec<(String, String)>)` for every (tagged) changesets.
 ///
 /// Can be quicker than parsing all data.
@@ -284,7 +286,7 @@ impl ChangesetReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
 pub struct ChangesetTagReader<R: Read> {
     reader: quick_xml::Reader<BufReader<R>>,
     curr_id: Option<u64>,
-    tags: Vec<(String, String)>,
+    tags: Tags,
 }
 
 impl ChangesetTagReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
@@ -307,7 +309,7 @@ impl<R: Read> ChangesetTagReader<R> {
     }
 
     /// The next changeset (& it's tags)
-    fn next_tag(&mut self) -> Result<Option<(u64, Vec<(String, String)>)>> {
+    fn next_tag(&mut self) -> Result<Option<(u64, Tags)>> {
         let mut buf = Vec::new();
         loop {
             match self.reader.read_event(&mut buf)? {

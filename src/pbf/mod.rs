@@ -25,7 +25,7 @@ struct FileReader<R: Read> {
     reader: R,
 }
 
-fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
+fn blob_raw_data(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     if blob.has_raw() {
@@ -90,8 +90,8 @@ fn decode_nodes(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    _stringtable: &Vec<Option<Arc<str>>>,
-    _results: &mut Vec<ArcOSMObj>,
+    _stringtable: &[Option<Arc<str>>],
+    _results: &mut [ArcOSMObj],
 ) {
     unimplemented!("Dense node");
 }
@@ -102,7 +102,7 @@ fn decode_dense_nodes(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
+    stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
     let dense = primitive_group.get_dense();
@@ -228,7 +228,7 @@ fn decode_ways(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
+    stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
     let ways = primitive_group.get_ways();
@@ -238,11 +238,11 @@ fn decode_ways(
         // TODO check for +itive keys/vals
         let keys = way
             .get_keys()
-            .into_iter()
+            .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = way
             .get_vals()
-            .into_iter()
+            .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
         let tags: Vec<_> = tags
@@ -259,7 +259,7 @@ fn decode_ways(
             let mut last_id = refs[0];
             nodes.push(last_id as ObjId);
             for nid in &refs[1..] {
-                last_id = nid + last_id;
+                last_id += nid;
                 nodes.push(last_id as ObjId);
             }
         }
@@ -300,7 +300,7 @@ fn decode_relations(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
+    stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
     let _last_timestamp = 0;
@@ -309,11 +309,11 @@ fn decode_relations(
         // TODO check for +itive keys/vals
         let keys = relation
             .get_keys()
-            .into_iter()
+            .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = relation
             .get_vals()
-            .into_iter()
+            .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
         let tags: Vec<_> = tags
@@ -325,7 +325,7 @@ fn decode_relations(
 
         let roles = relation
             .get_roles_sid()
-            .into_iter()
+            .iter()
             .map(|&idx| stringtable[idx as usize].clone());
 
         let refs = relation.get_memids();
@@ -335,7 +335,7 @@ fn decode_relations(
             let mut last_id = refs[0];
             member_ids.push(last_id as ObjId);
             for nid in &refs[1..] {
-                last_id = nid + last_id;
+                last_id += nid;
                 member_ids.push(last_id as ObjId);
             }
         }
@@ -351,10 +351,7 @@ fn decode_relations(
         let members: Vec<_> = member_types
             .zip(member_ids)
             .zip(roles)
-            .filter_map(|((t, &id), r_opt)| match r_opt {
-                Some(r) => Some((t, id, r)),
-                None => None,
-            })
+            .filter_map(|((t, &id), r_opt)| r_opt.map(|r| (t, id, r)))
             .collect();
 
         // TODO could there be *no* info? What should be done there
@@ -388,8 +385,8 @@ fn decode_primitive_group_to_objs(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
-    mut results: &mut Vec<ArcOSMObj>,
+    stringtable: &[Option<Arc<str>>],
+    results: &mut Vec<ArcOSMObj>,
 ) {
     let date_granularity = date_granularity / 1000;
     if !primitive_group.get_nodes().is_empty() {
@@ -399,8 +396,8 @@ fn decode_primitive_group_to_objs(
             lat_offset,
             lon_offset,
             date_granularity,
-            &stringtable,
-            &mut results,
+            stringtable,
+            results,
         );
     } else if primitive_group.has_dense() {
         decode_dense_nodes(
@@ -409,8 +406,8 @@ fn decode_primitive_group_to_objs(
             lat_offset,
             lon_offset,
             date_granularity,
-            &stringtable,
-            &mut results,
+            stringtable,
+            results,
         );
     } else if !primitive_group.get_ways().is_empty() {
         decode_ways(
@@ -419,8 +416,8 @@ fn decode_primitive_group_to_objs(
             lat_offset,
             lon_offset,
             date_granularity,
-            &stringtable,
-            &mut results,
+            stringtable,
+            results,
         );
     } else if !primitive_group.get_relations().is_empty() {
         decode_relations(
@@ -429,8 +426,8 @@ fn decode_primitive_group_to_objs(
             lat_offset,
             lon_offset,
             date_granularity,
-            &stringtable,
-            &mut results,
+            stringtable,
+            results,
         );
     } else {
         unreachable!();
@@ -442,7 +439,7 @@ fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<ArcOSMObj> 
         .take_stringtable()
         .take_s()
         .into_iter()
-        .map(|chars| std::str::from_utf8(&chars).ok().map(|s| Arc::from(s)))
+        .map(|chars| std::str::from_utf8(&chars).ok().map(Arc::from))
         .collect();
 
     let granularity = block.get_granularity();
