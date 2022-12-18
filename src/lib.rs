@@ -472,23 +472,33 @@ pub enum OSMObjectType {
     Relation,
 }
 
+impl OSMObjectType {
+    pub fn name_short(&self) -> &str {
+        match self {
+            OSMObjectType::Node => "n",
+            OSMObjectType::Way => "w",
+            OSMObjectType::Relation => "r",
+        }
+    }
+    pub fn name_long(&self) -> &str {
+        match self {
+            OSMObjectType::Node => "node",
+            OSMObjectType::Way => "way",
+            OSMObjectType::Relation => "relation",
+        }
+    }
+
+}
+
 impl std::fmt::Debug for OSMObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        match self {
-            OSMObjectType::Node => write!(f, "n"),
-            OSMObjectType::Way => write!(f, "w"),
-            OSMObjectType::Relation => write!(f, "r"),
-        }
+        write!(f, "{}", self.name_short())
     }
 }
 
 impl std::fmt::Display for OSMObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        match self {
-            OSMObjectType::Node => write!(f, "node"),
-            OSMObjectType::Way => write!(f, "way"),
-            OSMObjectType::Relation => write!(f, "relation"),
-        }
+        write!(f, "{}", self.name_long())
     }
 }
 
