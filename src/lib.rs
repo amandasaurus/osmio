@@ -22,6 +22,7 @@ extern crate derive_builder;
 extern crate anyhow;
 extern crate bzip2;
 extern crate serde;
+extern crate serde_json;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -326,6 +327,17 @@ pub trait OSMObjBase: PartialEq + Debug + Clone {
     }
     fn num_tags(&self) -> usize {
         self.tags().count()
+    }
+    // The tags of this object, as a JSON string
+    fn tags_json_string(&self) -> String {
+        if self.untagged() {
+            return "{}".to_string();
+        }
+        let mut t = serde_json::Map::new();
+        for (k, v) in self.tags() {
+            t.insert(k.to_string(), serde_json::Value::String(v.to_string()));
+        }
+        serde_json::Value::Object(t).to_string()
     }
 
     /// True iff this object has tags
