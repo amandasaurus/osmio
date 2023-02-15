@@ -26,7 +26,7 @@
 use super::*;
 use anyhow::{bail, ensure};
 use bzip2::read::MultiBzDecoder;
-use quick_xml::events::Event;
+use quick_xml::{events::Event, name::QName};
 use std::io::{BufReader, Read};
 
 /// A single OSM changeset entry
@@ -95,31 +95,34 @@ impl<R: Read> ChangesetReader<R> {
         // move forward until we are at a changeset tag (happens at the start)
         let changeset;
         loop {
-            match self.reader.read_event(&mut self.buf)? {
+            match self.reader.read_event_into(&mut self.buf)? {
                 Event::Eof => {
                     return Ok(None);
                 }
                 Event::Start(ref e) => {
-                    if e.name() != "changeset".as_bytes() {
+                    if e.name() != QName(b"changeset") {
                         continue;
                     }
 
                     let mut changeset_builder = ChangesetBuilder::default();
                     for attr in e.attributes() {
                         let attr = attr?;
-                        match attr.key {
+                        match attr.key.0 {
                             b"id" => {
-                                changeset_builder
-                                    .id(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                changeset_builder.id(self
+                                    .reader
+                                    .decoder()
+                                    .decode(attr.unescape_value()?.as_bytes())?
+                                    .parse()?);
                             }
                             b"created_at" => {
                                 changeset_builder.created(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"closed_at" => {
                                 changeset_builder.closed(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"open" => {
@@ -130,21 +133,32 @@ impl<R: Read> ChangesetReader<R> {
                                 });
                             }
                             b"user" => {
-                                changeset_builder
-                                    .user(attr.unescape_and_decode_value(&self.reader)?);
+                                changeset_builder.user(
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                );
                             }
                             b"uid" => {
-                                changeset_builder
-                                    .uid(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                changeset_builder.uid(
+                                    self.reader
+                                        .decoder()
+                                        .decode(attr.unescape_value()?.as_bytes())?
+                                        .parse()?,
+                                );
                             }
                             b"num_changes" => {
                                 changeset_builder.num_changes(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
+                                    self.reader
+                                        .decoder()
+                                        .decode(attr.unescape_value()?.as_bytes())?
+                                        .parse()?,
                                 );
                             }
                             b"comments_count" => {
                                 changeset_builder.comments_count(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
+                                    self.reader
+                                        .decoder()
+                                        .decode(attr.unescape_value()?.as_bytes())?
+                                        .parse()?,
                                 );
                             }
                             _ => {}
@@ -155,33 +169,33 @@ impl<R: Read> ChangesetReader<R> {
                     let mut tags = HashMap::new();
                     let mut buf = Vec::new();
                     loop {
-                        match self.reader.read_event(&mut buf)? {
+                        match self.reader.read_event_into(&mut buf)? {
                             Event::End(ref e) => {
-                                if e.name() == "changeset".as_bytes() {
+                                if e.name() == QName(b"changeset") {
                                     break;
                                 }
                             }
                             Event::Start(ref e) | Event::Empty(ref e) => {
-                                if e.name() != "tag".as_bytes() {
+                                if e.name() != QName(b"tag") {
                                     continue;
                                 }
                                 let mut k = None;
                                 let mut v = None;
                                 for attr in e.attributes() {
                                     let attr = attr?;
-                                    match attr.key {
+                                    match attr.key.0 {
                                         b"k" => {
-                                            k = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                            k = Some(attr.decode_and_unescape_value(&self.reader)?);
                                         }
                                         b"v" => {
-                                            v = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                            v = Some(attr.decode_and_unescape_value(&self.reader)?);
                                         }
                                         _ => {}
                                     }
                                 }
                                 ensure!(k.is_some(), "No k for tag");
                                 ensure!(v.is_some(), "No v for tag");
-                                tags.insert(k.unwrap(), v.unwrap());
+                                tags.insert(k.unwrap().to_string(), v.unwrap().to_string());
                             }
                             _ => continue,
                         }
@@ -193,26 +207,29 @@ impl<R: Read> ChangesetReader<R> {
                     break;
                 }
                 Event::Empty(ref e) => {
-                    if e.name() != "changeset".as_bytes() {
+                    if e.name() != QName(b"changeset") {
                         continue;
                     }
 
                     let mut changeset_builder = ChangesetBuilder::default();
                     for attr in e.attributes() {
                         let attr = attr?;
-                        match attr.key {
+                        match attr.key.0 {
                             b"id" => {
-                                changeset_builder
-                                    .id(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                changeset_builder.id(self
+                                    .reader
+                                    .decoder()
+                                    .decode(attr.unescape_value()?.as_bytes())?
+                                    .parse()?);
                             }
                             b"created_at" => {
                                 changeset_builder.created(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"closed_at" => {
                                 changeset_builder.closed(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"open" => {
@@ -223,21 +240,32 @@ impl<R: Read> ChangesetReader<R> {
                                 });
                             }
                             b"user" => {
-                                changeset_builder
-                                    .user(attr.unescape_and_decode_value(&self.reader)?);
+                                changeset_builder.user(
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                );
                             }
                             b"uid" => {
-                                changeset_builder
-                                    .uid(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                changeset_builder.uid(
+                                    self.reader
+                                        .decoder()
+                                        .decode(attr.unescape_value()?.as_bytes())?
+                                        .parse()?,
+                                );
                             }
                             b"num_changes" => {
                                 changeset_builder.num_changes(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
+                                    self.reader
+                                        .decoder()
+                                        .decode(attr.unescape_value()?.as_bytes())?
+                                        .parse()?,
                                 );
                             }
                             b"comments_count" => {
                                 changeset_builder.comments_count(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
+                                    self.reader
+                                        .decoder()
+                                        .decode(attr.unescape_value()?.as_bytes())?
+                                        .parse()?,
                                 );
                             }
                             _ => {}
@@ -312,12 +340,12 @@ impl<R: Read> ChangesetTagReader<R> {
     fn next_tag(&mut self) -> Result<Option<(u64, Tags)>> {
         let mut buf = Vec::new();
         loop {
-            match self.reader.read_event(&mut buf)? {
+            match self.reader.read_event_into(&mut buf)? {
                 Event::Eof => {
                     return Ok(None);
                 }
                 Event::End(ref e) => {
-                    if e.name() == b"changeset" {
+                    if e.name() == QName(b"changeset") {
                         ensure!(self.curr_id.is_some(), "Should be an id set");
 
                         return Ok(Some((
@@ -326,34 +354,39 @@ impl<R: Read> ChangesetTagReader<R> {
                         )));
                     }
                 }
-                Event::Start(ref e) if e.name() == b"changeset" => {
+                Event::Start(ref e) if e.name() == QName(b"changeset") => {
                     for attr in e.attributes() {
                         let attr = attr?;
-                        if attr.key == b"id" {
-                            self.curr_id =
-                                Some(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                        if attr.key == QName(b"id") {
+                            self.curr_id = Some(
+                                self.reader
+                                    .decoder()
+                                    .decode(attr.unescape_value()?.as_bytes())?
+                                    .parse()?,
+                            );
                         }
                     }
                     self.tags.truncate(0);
                 }
-                Event::Start(ref e) | Event::Empty(ref e) if e.name() == b"tag" => {
+                Event::Start(ref e) | Event::Empty(ref e) if e.name() == QName(b"tag") => {
                     let mut k = None;
                     let mut v = None;
                     for attr in e.attributes() {
                         let attr = attr?;
-                        match attr.key {
+                        match attr.key.0 {
                             b"k" => {
-                                k = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                k = Some(attr.decode_and_unescape_value(&self.reader)?);
                             }
                             b"v" => {
-                                v = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                v = Some(attr.decode_and_unescape_value(&self.reader)?);
                             }
                             _ => continue,
                         }
                     }
                     ensure!(k.is_some(), "No k for tag");
                     ensure!(v.is_some(), "No v for tag");
-                    self.tags.push((k.unwrap(), v.unwrap()));
+                    self.tags
+                        .push((k.unwrap().into_owned(), v.unwrap().into_owned()));
                 }
                 _ => continue,
             }

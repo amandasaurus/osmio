@@ -243,7 +243,7 @@ fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, String)> {
 
 pub(crate) fn xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMEle> {
     match els.first() {
-        Some(&XmlEvent::StartElement { ref name, .. }) => match name.local_name.as_str() {
+        Some(XmlEvent::StartElement { ref name, .. }) => match name.local_name.as_str() {
             "bounds" => bounds_xml_elements_to_osm_obj(els).map(StringOSMEle::Bounds),
             "node" => node_xml_elements_to_osm_obj(els).map(StringOSMEle::Object),
             "way" => way_xml_elements_to_osm_obj(els).map(StringOSMEle::Object),
@@ -544,8 +544,8 @@ impl<W: Write> Drop for XMLWriter<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::obj_types::StringNodeBuilder;
     use crate::{Lat, Lon};
-    use obj_types::StringNodeBuilder;
 
     macro_rules! assert_escape {
         ( $name:ident, $input:expr, $output:expr ) => {
