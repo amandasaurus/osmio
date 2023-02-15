@@ -3,3 +3,5 @@ Cargo.lock
 .*.swp
 /tarpaulin-report.html
 /changeset-examples.osm*
+/src/pbf/fileformat.rs
+/src/pbf/osmformat.rs
