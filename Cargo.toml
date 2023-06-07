@@ -16,7 +16,7 @@ chrono = "0.4.9"
 separator = "0.4.1"
 derive_builder = "0.10.2"
 quick-xml = "0.22.0"
-bzip2 = "0.4"
+bzip2 = "0.4.4"
 anyhow = "1.0"
 
 serde = { version = "1.0", features = ["derive"] }
