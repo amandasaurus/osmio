@@ -105,6 +105,7 @@ impl<R: Read> ChangesetReader<R> {
 
     pub fn next_changeset(&mut self) -> Result<Option<Changeset>> {
         // move forward until we are at a changeset tag (happens at the start)
+        self.buf.clear();
         let changeset;
         loop {
             match self.reader.read_event_into(&mut self.buf)? {
