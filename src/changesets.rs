@@ -84,21 +84,21 @@ pub struct ChangesetReader<R: Read> {
 }
 
 impl<R: Read> ChangesetReader<R> {
-    fn new(reader: R) -> ChangesetReader<R> {
+    pub fn new(reader: R) -> ChangesetReader<R> {
         ChangesetReader {
             reader: quick_xml::Reader::from_reader(BufReader::new(reader)),
             buf: Vec::new(),
         }
     }
 
-    ///// Get a refernce to the underlying reader.
-    //fn get_ref(&self) -> &R {
-    //    self.reader.get_ref().get_ref()
-    //}
-    ///// Consumes Reader returning the underlying reader
-    //fn into_inner(self) -> R {
-    //    self.reader.into_inner().into_inner()
-    //}
+    /// Get a refernce to the underlying reader.
+    pub fn get_ref(&self) -> &R {
+        self.reader.get_ref().get_ref()
+    }
+    /// Consumes Reader returning the underlying reader
+    pub fn into_inner(self) -> R {
+        self.reader.into_inner().into_inner()
+    }
 
     fn next_changeset(&mut self) -> Result<Option<Changeset>> {
         // move forward until we are at a changeset tag (happens at the start)
