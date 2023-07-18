@@ -95,31 +95,31 @@ impl<R: Read> ChangesetReader<R> {
         // move forward until we are at a changeset tag (happens at the start)
         let changeset;
         loop {
-            match self.reader.read_event(&mut self.buf)? {
+            match self.reader.read_event_into(&mut self.buf)? {
                 Event::Eof => {
                     return Ok(None);
                 }
                 Event::Start(ref e) => {
-                    if e.name() != "changeset".as_bytes() {
+                    if e.name().local_name().as_ref() != b"changeset" {
                         continue;
                     }
 
                     let mut changeset_builder = ChangesetBuilder::default();
                     for attr in e.attributes() {
                         let attr = attr?;
-                        match attr.key {
+                        match attr.key.local_name().as_ref() {
                             b"id" => {
                                 changeset_builder
-                                    .id(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                    .id(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"created_at" => {
                                 changeset_builder.created(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string()
                                 ));
                             }
                             b"closed_at" => {
                                 changeset_builder.closed(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string()
                                 ));
                             }
                             b"open" => {
@@ -131,21 +131,19 @@ impl<R: Read> ChangesetReader<R> {
                             }
                             b"user" => {
                                 changeset_builder
-                                    .user(attr.unescape_and_decode_value(&self.reader)?);
+                                    .user(attr.decode_and_unescape_value(&self.reader)?.to_string());
                             }
                             b"uid" => {
                                 changeset_builder
-                                    .uid(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                    .uid(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"num_changes" => {
-                                changeset_builder.num_changes(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
-                                );
+                                changeset_builder
+                                    .num_changes(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"comments_count" => {
-                                changeset_builder.comments_count(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
-                                );
+                                changeset_builder
+                                    .comments_count(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             _ => {}
                         }
@@ -155,26 +153,26 @@ impl<R: Read> ChangesetReader<R> {
                     let mut tags = HashMap::new();
                     let mut buf = Vec::new();
                     loop {
-                        match self.reader.read_event(&mut buf)? {
+                        match self.reader.read_event_into(&mut buf)? {
                             Event::End(ref e) => {
-                                if e.name() == "changeset".as_bytes() {
+                                if e.name().local_name().as_ref() == "changeset".as_bytes() {
                                     break;
                                 }
                             }
                             Event::Start(ref e) | Event::Empty(ref e) => {
-                                if e.name() != "tag".as_bytes() {
+                                if e.name().local_name().as_ref() != "tag".as_bytes() {
                                     continue;
                                 }
                                 let mut k = None;
                                 let mut v = None;
                                 for attr in e.attributes() {
                                     let attr = attr?;
-                                    match attr.key {
+                                    match attr.key.local_name().as_ref() {
                                         b"k" => {
-                                            k = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                            k = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
                                         }
                                         b"v" => {
-                                            v = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                            v = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
                                         }
                                         _ => {}
                                     }
@@ -192,27 +190,29 @@ impl<R: Read> ChangesetReader<R> {
                     changeset = Some(changeset_builder.build()?);
                     break;
                 }
+
+                // TODO find way to merge Start & Empty 
                 Event::Empty(ref e) => {
-                    if e.name() != "changeset".as_bytes() {
+                    if e.name().local_name().as_ref() != "changeset".as_bytes() {
                         continue;
                     }
 
                     let mut changeset_builder = ChangesetBuilder::default();
                     for attr in e.attributes() {
                         let attr = attr?;
-                        match attr.key {
+                        match attr.key.local_name().as_ref() {
                             b"id" => {
                                 changeset_builder
-                                    .id(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                    .id(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"created_at" => {
                                 changeset_builder.created(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"closed_at" => {
                                 changeset_builder.closed(TimestampFormat::ISOString(
-                                    attr.unescape_and_decode_value(&self.reader)?,
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"open" => {
@@ -224,21 +224,19 @@ impl<R: Read> ChangesetReader<R> {
                             }
                             b"user" => {
                                 changeset_builder
-                                    .user(attr.unescape_and_decode_value(&self.reader)?);
+                                    .user(attr.decode_and_unescape_value(&self.reader)?.to_string());
                             }
                             b"uid" => {
                                 changeset_builder
-                                    .uid(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                    .uid(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"num_changes" => {
-                                changeset_builder.num_changes(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
-                                );
+                                changeset_builder
+                                    .num_changes(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"comments_count" => {
-                                changeset_builder.comments_count(
-                                    self.reader.decode(&attr.unescaped_value()?)?.parse()?,
-                                );
+                                changeset_builder
+                                    .comments_count(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             _ => {}
                         }
@@ -310,12 +308,12 @@ impl<R: Read> ChangesetTagReader<R> {
     fn next_tag(&mut self) -> Result<Option<(u64, Vec<(String, String)>)>> {
         let mut buf = Vec::new();
         loop {
-            match self.reader.read_event(&mut buf)? {
+            match self.reader.read_event_into(&mut buf)? {
                 Event::Eof => {
                     return Ok(None);
                 }
                 Event::End(ref e) => {
-                    if e.name() == b"changeset" {
+                    if e.name().local_name().as_ref() == b"changeset" {
                         ensure!(self.curr_id.is_some(), "Should be an id set");
 
                         return Ok(Some((
@@ -324,27 +322,27 @@ impl<R: Read> ChangesetTagReader<R> {
                         )));
                     }
                 }
-                Event::Start(ref e) if e.name() == b"changeset" => {
+                Event::Start(ref e) if e.name().local_name().as_ref() == b"changeset" => {
                     for attr in e.attributes() {
                         let attr = attr?;
-                        if attr.key == b"id" {
+                        if attr.key.local_name().as_ref() == b"id" {
                             self.curr_id =
-                                Some(self.reader.decode(&attr.unescaped_value()?)?.parse()?);
+                                Some(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                         }
                     }
                     self.tags.truncate(0);
                 }
-                Event::Start(ref e) | Event::Empty(ref e) if e.name() == b"tag" => {
+                Event::Start(ref e) | Event::Empty(ref e) if e.name().local_name().as_ref() == b"tag" => {
                     let mut k = None;
                     let mut v = None;
                     for attr in e.attributes() {
                         let attr = attr?;
-                        match attr.key {
+                        match attr.key.local_name().as_ref() {
                             b"k" => {
-                                k = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                k = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
                             }
                             b"v" => {
-                                v = Some(attr.unescape_and_decode_value(&self.reader)?);
+                                v = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
                             }
                             _ => continue,
                         }
