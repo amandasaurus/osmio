@@ -85,6 +85,9 @@ pub struct ChangesetReader<R: Read> {
 
 impl<R: Read> ChangesetReader<R> {
     pub fn new(reader: R) -> ChangesetReader<R> {
+        ChangesetReader::from_reader(reader)
+    }
+    pub fn from_reader(reader: R) -> ChangesetReader<R> {
         ChangesetReader {
             reader: quick_xml::Reader::from_reader(BufReader::new(reader)),
             buf: Vec::new(),
@@ -100,7 +103,7 @@ impl<R: Read> ChangesetReader<R> {
         self.reader.into_inner().into_inner()
     }
 
-    fn next_changeset(&mut self) -> Result<Option<Changeset>> {
+    pub fn next_changeset(&mut self) -> Result<Option<Changeset>> {
         // move forward until we are at a changeset tag (happens at the start)
         let changeset;
         loop {

@@ -236,7 +236,7 @@ impl From<std::num::ParseFloatError> for ParseLatLonError {
 ///
 /// In XML files, timestamps are represented as ISO strings, and in PBF files, as integer seconds
 /// since the epoch
-#[derive(Debug, Clone, Eq, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, Serialize, Deserialize)]
 pub enum TimestampFormat {
     ISOString(String),
     EpochNunber(i64),
