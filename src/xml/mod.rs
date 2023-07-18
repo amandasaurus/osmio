@@ -256,8 +256,8 @@ fn node_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj>
     let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
     let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
     let changeset_id = get_xml_attribute(attrs, "changeset").and_then(|x| x.parse().ok());
-    let timestamp = get_xml_attribute(attrs, "timestamp")
-        .map(|x| TimestampFormat::ISOString(x.to_owned()));
+    let timestamp =
+        get_xml_attribute(attrs, "timestamp").map(|x| TimestampFormat::ISOString(x.to_owned()));
     let uid = get_xml_attribute(attrs, "uid").and_then(|x| x.parse().ok());
     let user = get_xml_attribute(attrs, "user");
     let lat = get_xml_attribute(attrs, "lat")?.parse();
@@ -295,8 +295,8 @@ fn way_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> 
     let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
     let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
     let changeset_id = get_xml_attribute(attrs, "changeset").and_then(|x| x.parse().ok());
-    let timestamp = get_xml_attribute(attrs, "timestamp")
-        .map(|x| TimestampFormat::ISOString(x.to_owned()));
+    let timestamp =
+        get_xml_attribute(attrs, "timestamp").map(|x| TimestampFormat::ISOString(x.to_owned()));
     let uid = get_xml_attribute(attrs, "uid").and_then(|x| x.parse().ok());
     let user = get_xml_attribute(attrs, "user");
     let deleted = get_xml_attribute(attrs, "visible")
@@ -327,8 +327,8 @@ fn relation_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSM
     let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
     let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
     let changeset_id = get_xml_attribute(attrs, "changeset").and_then(|x| x.parse().ok());
-    let timestamp = get_xml_attribute(attrs, "timestamp")
-        .map(|x| TimestampFormat::ISOString(x.to_owned()));
+    let timestamp =
+        get_xml_attribute(attrs, "timestamp").map(|x| TimestampFormat::ISOString(x.to_owned()));
     let uid = get_xml_attribute(attrs, "uid").and_then(|x| x.parse().ok());
     let user = get_xml_attribute(attrs, "user");
     let deleted = get_xml_attribute(attrs, "visible")

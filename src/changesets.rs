@@ -126,12 +126,12 @@ impl<R: Read> ChangesetReader<R> {
                             }
                             b"created_at" => {
                                 changeset_builder.created(TimestampFormat::ISOString(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string()
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"closed_at" => {
                                 changeset_builder.closed(TimestampFormat::ISOString(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string()
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
                                 ));
                             }
                             b"open" => {
@@ -142,20 +142,23 @@ impl<R: Read> ChangesetReader<R> {
                                 });
                             }
                             b"user" => {
-                                changeset_builder
-                                    .user(attr.decode_and_unescape_value(&self.reader)?.to_string());
+                                changeset_builder.user(
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                );
                             }
                             b"uid" => {
                                 changeset_builder
                                     .uid(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"num_changes" => {
-                                changeset_builder
-                                    .num_changes(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                changeset_builder.num_changes(
+                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                );
                             }
                             b"comments_count" => {
-                                changeset_builder
-                                    .comments_count(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                changeset_builder.comments_count(
+                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                );
                             }
                             _ => {}
                         }
@@ -181,10 +184,16 @@ impl<R: Read> ChangesetReader<R> {
                                     let attr = attr?;
                                     match attr.key.local_name().as_ref() {
                                         b"k" => {
-                                            k = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
+                                            k = Some(
+                                                attr.decode_and_unescape_value(&self.reader)?
+                                                    .to_string(),
+                                            );
                                         }
                                         b"v" => {
-                                            v = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
+                                            v = Some(
+                                                attr.decode_and_unescape_value(&self.reader)?
+                                                    .to_string(),
+                                            );
                                         }
                                         _ => {}
                                     }
@@ -203,7 +212,7 @@ impl<R: Read> ChangesetReader<R> {
                     break;
                 }
 
-                // TODO find way to merge Start & Empty 
+                // TODO find way to merge Start & Empty
                 Event::Empty(ref e) => {
                     if e.name().local_name().as_ref() != "changeset".as_bytes() {
                         continue;
@@ -235,20 +244,23 @@ impl<R: Read> ChangesetReader<R> {
                                 });
                             }
                             b"user" => {
-                                changeset_builder
-                                    .user(attr.decode_and_unescape_value(&self.reader)?.to_string());
+                                changeset_builder.user(
+                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                );
                             }
                             b"uid" => {
                                 changeset_builder
                                     .uid(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                             }
                             b"num_changes" => {
-                                changeset_builder
-                                    .num_changes(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                changeset_builder.num_changes(
+                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                );
                             }
                             b"comments_count" => {
-                                changeset_builder
-                                    .comments_count(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                changeset_builder.comments_count(
+                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                );
                             }
                             _ => {}
                         }
@@ -344,7 +356,9 @@ impl<R: Read> ChangesetTagReader<R> {
                     }
                     self.tags.truncate(0);
                 }
-                Event::Start(ref e) | Event::Empty(ref e) if e.name().local_name().as_ref() == b"tag" => {
+                Event::Start(ref e) | Event::Empty(ref e)
+                    if e.name().local_name().as_ref() == b"tag" =>
+                {
                     let mut k = None;
                     let mut v = None;
                     for attr in e.attributes() {

@@ -487,7 +487,6 @@ impl OSMObjectType {
             OSMObjectType::Relation => "relation",
         }
     }
-
 }
 
 impl std::fmt::Debug for OSMObjectType {

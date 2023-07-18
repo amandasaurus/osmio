@@ -311,7 +311,8 @@ impl OSMObjBase for ArcNode {
                     } else {
                         None
                     }
-                }).next()
+                })
+                .next()
         })
     }
 
@@ -326,7 +327,8 @@ impl OSMObjBase for ArcNode {
                 let idx = tags
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
+                    .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                    .next();
                 match idx {
                     None => tags.push((Arc::from(key), Arc::from(value.as_str()))),
                     Some(i) => tags[i] = (key.into(), Arc::from(value.as_str())),
@@ -341,7 +343,8 @@ impl OSMObjBase for ArcNode {
             let idx = tags
                 .iter()
                 .enumerate()
-                .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
+                .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                .next();
             if let Some(i) = idx {
                 tags.remove(i);
             }
@@ -418,7 +421,8 @@ impl OSMObjBase for ArcWay {
                 } else {
                     None
                 }
-            }).next()
+            })
+            .next()
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
@@ -428,7 +432,8 @@ impl OSMObjBase for ArcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .next();
         match idx {
             None => self._tags.push((Arc::from(key), Arc::from(value.as_str()))),
             Some(i) => self._tags[i] = (key.into(), Arc::from(value.as_str())),
@@ -441,7 +446,8 @@ impl OSMObjBase for ArcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .next();
         if let Some(i) = idx {
             self._tags.remove(i);
         }
@@ -525,7 +531,8 @@ impl OSMObjBase for ArcRelation {
                 } else {
                     None
                 }
-            }).next()
+            })
+            .next()
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
@@ -535,7 +542,8 @@ impl OSMObjBase for ArcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .next();
         match idx {
             None => self._tags.push((Arc::from(key), Arc::from(value.as_str()))),
             Some(i) => self._tags[i] = (key.into(), Arc::from(value.as_str())),
@@ -548,7 +556,8 @@ impl OSMObjBase for ArcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .next();
         if let Some(i) = idx {
             self._tags.remove(i);
         }
@@ -559,11 +568,7 @@ impl Relation for ArcRelation {
     fn members<'a>(
         &'a self,
     ) -> Box<dyn ExactSizeIterator<Item = (OSMObjectType, ObjId, &'a str)> + 'a> {
-        Box::new(
-            self._members
-                .iter()
-                .map(|(t, o, r)| (*t, *o, r.as_ref())),
-        )
+        Box::new(self._members.iter().map(|(t, o, r)| (*t, *o, r.as_ref())))
     }
 
     fn set_members(
