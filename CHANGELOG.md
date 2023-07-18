@@ -1,5 +1,7 @@
 # Unreleased
 
+# v0.8.0 (2023-07-25)
+
 * Internal refactoring, and dependency updates
 * `ChangesetReader` has methods `get_ref` & `into_inner` to access the original
   source reader
