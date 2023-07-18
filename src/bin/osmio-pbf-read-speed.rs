@@ -18,7 +18,7 @@ fn main() {
 
     let start = Instant::now();
     let mut num_objects: u64 = 0;
-    let mut last_print = start.clone();
+    let mut last_print = start;
 
     for _ in pbf_reader.objects() {
         if num_objects % 1_000 == 0 {

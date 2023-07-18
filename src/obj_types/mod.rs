@@ -44,7 +44,7 @@ impl From<RcWay> for StringWay {
             w.set_tag(k, v);
         }
 
-        w.set_nodes(obj.nodes().iter().map(|i| i.clone()));
+        w.set_nodes(obj.nodes().iter().copied());
 
         w
     }
@@ -119,7 +119,7 @@ impl From<ArcWay> for StringWay {
             w.set_tag(k, v);
         }
 
-        w.set_nodes(obj.nodes().iter().map(|i| i.clone()));
+        w.set_nodes(obj.nodes().iter().copied());
 
         w
     }

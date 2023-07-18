@@ -93,7 +93,7 @@ impl<R: Read> OSMReader for OSCReader<R> {
 impl<W: Write> OSCWriter<W> {
     fn ensure_header(&mut self) -> Result<(), OSMWriteError> {
         if self._state == State::Initial {
-            write!(self.writer, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")?;
+            writeln!(self.writer, "<?xml version=\"1.0\" encoding=\"utf-8\"?>")?;
             write!(
                 self.writer,
                 "<osmChange version=\"0.6\" generator=\"osmio/{}\"",
@@ -117,7 +117,7 @@ impl<W: Write> OSCWriter<W> {
 impl<W: Write> OSMWriter<W> for OSCWriter<W> {
     fn new(writer: W) -> Self {
         OSCWriter {
-            writer: writer,
+            writer,
             //headers: HashMap::new(),
             _state: State::Initial,
         }
@@ -175,7 +175,7 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
             write!(self.writer, " changeset=\"{}\"", changeset_id)?;
         }
         if let Some(timestamp) = obj.timestamp() {
-            write!(self.writer, " timestamp=\"{}\"", timestamp.to_string())?;
+            write!(self.writer, " timestamp=\"{}\"", timestamp)?;
         }
 
         if let Some(node) = obj.as_node() {

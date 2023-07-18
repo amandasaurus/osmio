@@ -202,7 +202,7 @@ impl OSMObj for ArcOSMObj {
 
     fn as_node(&self) -> Option<&ArcNode> {
         if let ArcOSMObj::Node(n) = self {
-            Some(&n)
+            Some(n)
         } else {
             None
         }
@@ -210,7 +210,7 @@ impl OSMObj for ArcOSMObj {
 
     fn as_way(&self) -> Option<&ArcWay> {
         if let ArcOSMObj::Way(w) = self {
-            Some(&w)
+            Some(w)
         } else {
             None
         }
@@ -218,7 +218,7 @@ impl OSMObj for ArcOSMObj {
 
     fn as_relation(&self) -> Option<&ArcRelation> {
         if let ArcOSMObj::Relation(r) = self {
-            Some(&r)
+            Some(r)
         } else {
             None
         }
@@ -269,10 +269,7 @@ impl OSMObjBase for ArcNode {
         self._uid
     }
     fn user(&self) -> Option<&str> {
-        match self._user {
-            None => None,
-            Some(ref s) => Some(&s),
-        }
+        self._user.as_ref().map(|x| x as _)
     }
 
     fn set_id(&mut self, val: impl Into<ObjId>) {
@@ -282,7 +279,7 @@ impl OSMObjBase for ArcNode {
         self._version = val.into();
     }
     fn set_deleted(&mut self, val: bool) {
-        self._deleted = val.into();
+        self._deleted = val;
     }
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) {
         self._changeset_id = val.into();
@@ -294,7 +291,7 @@ impl OSMObjBase for ArcNode {
         self._uid = val.into();
     }
     fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) {
-        self._user = val.into().map(|s| Arc::from(s));
+        self._user = val.into().map(Arc::from);
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
@@ -306,7 +303,7 @@ impl OSMObjBase for ArcNode {
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str> {
         let key = key.as_ref();
-        self._tags.as_ref().map_or(None, |tags| {
+        self._tags.as_ref().and_then(|tags| {
             tags.iter()
                 .filter_map(|(k, v)| {
                     if &k.as_ref() == &key {
@@ -314,8 +311,7 @@ impl OSMObjBase for ArcNode {
                     } else {
                         None
                     }
-                })
-                .nth(0)
+                }).next()
         })
     }
 
@@ -330,8 +326,7 @@ impl OSMObjBase for ArcNode {
                 let idx = tags
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-                    .nth(0);
+                    .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
                 match idx {
                     None => tags.push((Arc::from(key), Arc::from(value.as_str()))),
                     Some(i) => tags[i] = (key.into(), Arc::from(value.as_str())),
@@ -346,8 +341,7 @@ impl OSMObjBase for ArcNode {
             let idx = tags
                 .iter()
                 .enumerate()
-                .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-                .nth(0);
+                .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
             if let Some(i) = idx {
                 tags.remove(i);
             }
@@ -385,10 +379,7 @@ impl OSMObjBase for ArcWay {
         self._uid
     }
     fn user(&self) -> Option<&str> {
-        match self._user {
-            None => None,
-            Some(ref s) => Some(&s),
-        }
+        self._user.as_ref().map(|x| x as _)
     }
 
     fn set_id(&mut self, val: impl Into<ObjId>) {
@@ -398,7 +389,7 @@ impl OSMObjBase for ArcWay {
         self._version = val.into();
     }
     fn set_deleted(&mut self, val: bool) {
-        self._deleted = val.into();
+        self._deleted = val;
     }
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) {
         self._changeset_id = val.into();
@@ -410,7 +401,7 @@ impl OSMObjBase for ArcWay {
         self._uid = val.into();
     }
     fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) {
-        self._user = val.into().map(|s| Arc::from(s));
+        self._user = val.into().map(Arc::from);
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
@@ -427,8 +418,7 @@ impl OSMObjBase for ArcWay {
                 } else {
                     None
                 }
-            })
-            .nth(0)
+            }).next()
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
@@ -438,8 +428,7 @@ impl OSMObjBase for ArcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-            .nth(0);
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
         match idx {
             None => self._tags.push((Arc::from(key), Arc::from(value.as_str()))),
             Some(i) => self._tags[i] = (key.into(), Arc::from(value.as_str())),
@@ -452,8 +441,7 @@ impl OSMObjBase for ArcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-            .nth(0);
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
         if let Some(i) = idx {
             self._tags.remove(i);
         }
@@ -498,10 +486,7 @@ impl OSMObjBase for ArcRelation {
         self._uid
     }
     fn user(&self) -> Option<&str> {
-        match self._user {
-            None => None,
-            Some(ref s) => Some(&s),
-        }
+        self._user.as_ref().map(|x| x as _)
     }
 
     fn set_id(&mut self, val: impl Into<ObjId>) {
@@ -511,7 +496,7 @@ impl OSMObjBase for ArcRelation {
         self._version = val.into();
     }
     fn set_deleted(&mut self, val: bool) {
-        self._deleted = val.into();
+        self._deleted = val;
     }
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) {
         self._changeset_id = val.into();
@@ -523,7 +508,7 @@ impl OSMObjBase for ArcRelation {
         self._uid = val.into();
     }
     fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) {
-        self._user = val.into().map(|s| Arc::from(s));
+        self._user = val.into().map(Arc::from);
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
@@ -540,8 +525,7 @@ impl OSMObjBase for ArcRelation {
                 } else {
                     None
                 }
-            })
-            .nth(0)
+            }).next()
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
@@ -551,8 +535,7 @@ impl OSMObjBase for ArcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-            .nth(0);
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
         match idx {
             None => self._tags.push((Arc::from(key), Arc::from(value.as_str()))),
             Some(i) => self._tags[i] = (key.into(), Arc::from(value.as_str())),
@@ -565,8 +548,7 @@ impl OSMObjBase for ArcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
-            .nth(0);
+            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None }).next();
         if let Some(i) = idx {
             self._tags.remove(i);
         }
@@ -580,7 +562,7 @@ impl Relation for ArcRelation {
         Box::new(
             self._members
                 .iter()
-                .map(|(t, o, r)| (t.clone(), o.clone(), r.as_ref())),
+                .map(|(t, o, r)| (*t, *o, r.as_ref())),
         )
     }
 

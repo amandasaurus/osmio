@@ -230,7 +230,7 @@ impl OSMObj for StringOSMObj {
 
     fn as_node(&self) -> Option<&StringNode> {
         if let StringOSMObj::Node(n) = self {
-            Some(&n)
+            Some(n)
         } else {
             None
         }
@@ -238,7 +238,7 @@ impl OSMObj for StringOSMObj {
 
     fn as_way(&self) -> Option<&StringWay> {
         if let StringOSMObj::Way(w) = self {
-            Some(&w)
+            Some(w)
         } else {
             None
         }
@@ -246,7 +246,7 @@ impl OSMObj for StringOSMObj {
 
     fn as_relation(&self) -> Option<&StringRelation> {
         if let StringOSMObj::Relation(r) = self {
-            Some(&r)
+            Some(r)
         } else {
             None
         }
@@ -297,10 +297,7 @@ impl OSMObjBase for StringNode {
         self._uid
     }
     fn user(&self) -> Option<&str> {
-        match self._user {
-            None => None,
-            Some(ref s) => Some(&s),
-        }
+        self._user.as_ref().map(|x| x as _)
     }
 
     fn set_id(&mut self, val: impl Into<ObjId>) {
@@ -310,7 +307,7 @@ impl OSMObjBase for StringNode {
         self._version = val.into();
     }
     fn set_deleted(&mut self, val: bool) {
-        self._deleted = val.into();
+        self._deleted = val;
     }
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) {
         self._changeset_id = val.into();
@@ -372,10 +369,7 @@ impl OSMObjBase for StringWay {
         self._uid
     }
     fn user(&self) -> Option<&str> {
-        match self._user {
-            None => None,
-            Some(ref s) => Some(&s),
-        }
+        self._user.as_ref().map(|x| x as _)
     }
 
     fn set_id(&mut self, val: impl Into<ObjId>) {
@@ -385,7 +379,7 @@ impl OSMObjBase for StringWay {
         self._version = val.into();
     }
     fn set_deleted(&mut self, val: bool) {
-        self._deleted = val.into();
+        self._deleted = val;
     }
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) {
         self._changeset_id = val.into();
@@ -453,10 +447,7 @@ impl OSMObjBase for StringRelation {
         self._uid
     }
     fn user(&self) -> Option<&str> {
-        match self._user {
-            None => None,
-            Some(ref s) => Some(&s),
-        }
+        self._user.as_ref().map(|x| x as _)
     }
 
     fn set_id(&mut self, val: impl Into<ObjId>) {
@@ -466,7 +457,7 @@ impl OSMObjBase for StringRelation {
         self._version = val.into();
     }
     fn set_deleted(&mut self, val: bool) {
-        self._deleted = val.into();
+        self._deleted = val;
     }
     fn set_changeset_id(&mut self, val: impl Into<Option<u32>>) {
         self._changeset_id = val.into();
