@@ -1,5 +1,9 @@
 # Unreleased
 
+# v0.8.1 (2023-07-25)
+
+* Added `ChangesetReader::from_bz2_reader` method
+
 # v0.8.0 (2023-07-25)
 
 * Internal refactoring, and dependency updates
