@@ -299,6 +299,15 @@ impl ChangesetReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
     }
 }
 
+/// A `Reader` which “returns” BZ2 compressed data
+impl<R: Read> ChangesetReader<bzip2::read::MultiBzDecoder<R>> {
+    pub fn from_bz2_reader(rdr: R) -> Self {
+        let dec = MultiBzDecoder::new(rdr);
+        ChangesetReader::from_reader(dec)
+    }
+
+}
+
 /// Reads the `changesets-latest.osm.bz2` file and produces tuples of (id, tags) `(u64, Vec<(String, String)>)` for every (tagged) changesets.
 ///
 /// Can be quicker than parsing all data.
