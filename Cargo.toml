@@ -3,7 +3,7 @@ name = "osmio"
 version = "0.8.1"
 authors = ["Amanda McCann <amanda@technomancy.org>"]
 keywords = ["openstreetmap", "osm"]
-license = "AGPL-3.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/amandasaurus/osmio/"
 description = "Read and write OpenStreetMap data files"
 

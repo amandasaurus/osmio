@@ -1,5 +1,7 @@
 # Unreleased
 
+* Relicence from AGPL to MIT/Apache2.
+
 # v0.8.1 (2023-07-25)
 
 * Added `ChangesetReader::from_bz2_reader` method
