@@ -168,8 +168,8 @@ pub(crate) fn get_xml_attribute<'a>(attrs: &mut Vec<OwnedAttribute>, key: &str) 
         })
 }
 
-fn get_tags(els: &mut Vec<XmlEvent>) -> HashMap<String, String> {
-    let mut result = HashMap::new();
+fn get_tags(els: &mut Vec<XmlEvent>) -> Option<Vec<(String, String)>> {
+    let mut result: Option<Vec<(String, String)>> = None;
     for el in els.iter_mut() {
         if let &mut XmlEvent::StartElement {
             ref name,
@@ -181,7 +181,12 @@ fn get_tags(els: &mut Vec<XmlEvent>) -> HashMap<String, String> {
                 let ko = get_xml_attribute(attributes, "k");
                 let vo = get_xml_attribute(attributes, "v");
                 if let (Some(k), Some(v)) = (ko, vo) {
-                    result.insert(k, v);
+                    match result {
+                        None => { result = Some(vec![(k, v)]); },
+                        Some(ref mut res) => {
+                            res.push((k, v));
+                        }
+                    }
                 }
             }
         }
@@ -317,7 +322,7 @@ fn way_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> 
         _timestamp: timestamp,
         _uid: uid,
         _user: user,
-        _tags: tags,
+        _tags: tags.unwrap_or_else(|| Vec::new()),
         _nodes: nodes,
     }))
 }
@@ -349,7 +354,7 @@ fn relation_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSM
         _timestamp: timestamp,
         _uid: uid,
         _user: user,
-        _tags: tags,
+        _tags: tags.unwrap_or_else(|| Vec::new()),
         _members: members,
     }))
 }

@@ -39,8 +39,8 @@ pub struct StringNode {
     #[builder(default = "None")]
     pub(crate) _user: Option<String>,
 
-    #[builder(default = "HashMap::new()")]
-    pub(crate) _tags: HashMap<String, String>,
+    #[builder(default = "None")]
+    pub(crate) _tags: Option<Vec<(String, String)>>,
 
     #[builder(default = "None")]
     pub(crate) _lat_lon: Option<(Lat, Lon)>,
@@ -63,8 +63,8 @@ pub struct StringWay {
     #[builder(default = "None")]
     pub(crate) _user: Option<String>,
 
-    #[builder(default = "HashMap::new()")]
-    pub(crate) _tags: HashMap<String, String>,
+    #[builder(default = "Vec::new()")]
+    pub(crate) _tags: Vec<(String, String)>,
 
     #[builder(default = "Vec::new()")]
     pub(crate) _nodes: Vec<ObjId>,
@@ -87,8 +87,8 @@ pub struct StringRelation {
     #[builder(default = "None")]
     pub(crate) _user: Option<String>,
 
-    #[builder(default = "HashMap::new()")]
-    pub(crate) _tags: HashMap<String, String>,
+    #[builder(default = "Vec::new()")]
+    pub(crate) _tags: Vec<(String, String)>,
 
     #[builder(default = "Vec::new()")]
     pub(crate) _members: Vec<(OSMObjectType, ObjId, String)>,
@@ -323,21 +323,65 @@ impl OSMObjBase for StringNode {
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
-        Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
+        match self._tags {
+            None => Box::new(std::iter::empty()),
+            Some(ref t) => Box::new(t.iter().map(|(k, v)| (k.as_ref(), v.as_ref()))),
+        }
     }
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str> {
-        self._tags.get(key.as_ref()).map(|s| s.as_ref())
+        let key = key.as_ref();
+        self._tags.as_ref().and_then(|tags| {
+            tags.iter()
+                .filter_map(|(k, v)| {
+                    if k == &key {
+                        Some(v.as_ref())
+                    } else {
+                        None
+                    }
+                })
+                .next()
+        })
     }
 
-    fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
-        self._tags.insert(key.as_ref().into(), value.into());
+
+    fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>)
+    {
+        let key: &str = key.as_ref();
+        let value: String = value.into();
+        match self._tags {
+            None => {
+                self._tags = Some(vec![(key.to_string(), value)]);
+            }
+            Some(ref mut tags) => {
+                let idx = tags
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
+                    .next();
+                match idx {
+                    None => { tags.push((key.to_string(), value)) },
+                    Some(i) => { tags[i] = (key.to_string(), value) },
+                }
+            }
+        }
     }
 
     fn unset_tag(&mut self, key: impl AsRef<str>) {
-        self._tags.remove(key.as_ref());
+        if let Some(ref mut tags) = self._tags {
+            let key = key.as_ref();
+            let idx = tags
+                .iter()
+                .enumerate()
+                .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+                .next();
+            if let Some(i) = idx {
+                tags.remove(i);
+            }
+        }
     }
 }
+
 
 impl Node for StringNode {
     fn lat_lon(&self) -> Option<(Lat, Lon)> {
@@ -399,15 +443,45 @@ impl OSMObjBase for StringWay {
     }
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str> {
-        self._tags.get(key.as_ref()).map(|s| s.as_ref())
+        let key = key.as_ref();
+        self._tags
+            .iter()
+            .filter_map(|(k, v)| {
+                if k == &key {
+                    Some(v.as_ref())
+                } else {
+                    None
+                }
+            })
+            .next()
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
-        self._tags.insert(key.as_ref().into(), value.into());
+        let key = key.as_ref();
+        let value = value.into();
+        let idx = self
+            ._tags
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .next();
+        match idx {
+            None => { self._tags.push((key.to_string(), value)) },
+            Some(i) => { self._tags[i] = (key.into(), value) },
+        }
     }
 
     fn unset_tag(&mut self, key: impl AsRef<str>) {
-        self._tags.remove(key.as_ref());
+        let key = key.as_ref();
+        let idx = self
+            ._tags
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .next();
+        if let Some(i) = idx {
+            self._tags.remove(i);
+        }
     }
 }
 
@@ -477,15 +551,45 @@ impl OSMObjBase for StringRelation {
     }
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str> {
-        self._tags.get(key.as_ref()).map(|s| s.as_ref())
+        let key = key.as_ref();
+        self._tags
+            .iter()
+            .filter_map(|(k, v)| {
+                if k == &key {
+                    Some(v.as_ref())
+                } else {
+                    None
+                }
+            })
+            .next()
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
-        self._tags.insert(key.as_ref().into(), value.into());
+        let key = key.as_ref();
+        let value = value.into();
+        let idx = self
+            ._tags
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .next();
+        match idx {
+            None => { self._tags.push((key.to_string(), value)) },
+            Some(i) => { self._tags[i] = (key.into(), value) },
+        }
     }
 
     fn unset_tag(&mut self, key: impl AsRef<str>) {
-        self._tags.remove(key.as_ref());
+        let key = key.as_ref();
+        let idx = self
+            ._tags
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .next();
+        if let Some(i) = idx {
+            self._tags.remove(i);
+        }
     }
 }
 
