@@ -476,7 +476,7 @@ impl<R: Read> Iterator for FileReader<R> {
 /// A thing that read PBF files
 pub struct PBFReader<R: Read> {
     filereader: FileReader<R>,
-    _buffer: Vec<StringOSMObj>,
+    buffer: Vec<StringOSMObj>,
     _sorted_assumption: bool,
 }
 
@@ -495,7 +495,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
     fn new(reader: R) -> PBFReader<R> {
         PBFReader {
             filereader: FileReader::new(reader),
-            _buffer: Vec::new(),
+            buffer: Vec::new(),
             _sorted_assumption: false,
         }
     }
@@ -516,7 +516,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
     }
 
     fn next(&mut self) -> Option<StringOSMObj> {
-        while self._buffer.is_empty() {
+        while self.buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel
 
@@ -533,9 +533,9 @@ impl<R: Read> OSMReader for PBFReader<R> {
             // IME pop'ing is faster, since it means less memory moving
             objs.reverse();
 
-            self._buffer = objs;
+            self.buffer = objs;
         }
 
-        self._buffer.pop()
+        self.buffer.pop()
     }
 }
