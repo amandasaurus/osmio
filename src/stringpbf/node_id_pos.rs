@@ -68,9 +68,8 @@ fn decode_block_to_objs(block: osmformat::PrimitiveBlock, sink: &mut VecDeque<No
     for primitive_group in block.get_primitivegroup() {
         if !primitive_group.get_nodes().is_empty() {
             unimplemented!()
-        } else if !primitive_group.get_ways().is_empty() {
-            continue;
-        } else if !primitive_group.get_relations().is_empty() {
+        } else if !primitive_group.get_ways().is_empty() ||
+            !primitive_group.get_relations().is_empty() {
             continue;
         } else if primitive_group.has_dense() {
             let dense = primitive_group.get_dense();

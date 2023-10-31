@@ -25,7 +25,7 @@ struct FileReader<R: Read> {
     reader: R,
 }
 
-fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
+fn blob_raw_data(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     if blob.has_raw() {
@@ -90,8 +90,8 @@ fn decode_nodes(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    _stringtable: &Vec<Option<Arc<str>>>,
-    _results: &mut Vec<ArcOSMObj>,
+    _stringtable: &[Option<Arc<str>>],
+    _results: &mut [ArcOSMObj],
 ) {
     unimplemented!("Dense node");
 }
@@ -102,7 +102,7 @@ fn decode_dense_nodes(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
+    stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
     let dense = primitive_group.get_dense();
