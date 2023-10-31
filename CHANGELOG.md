@@ -1,4 +1,4 @@
-# Unreleased
+# v0.10.0 (2023-11-14)
 
 * Internal refactoring to speed up
 * Can now read a PBF file and just get the node ids & positions
