@@ -492,6 +492,24 @@ pub struct PBFReader<R: Read> {
     _sorted_assumption: bool,
 }
 
+impl<R: Read> PBFReader<R> {
+    /// Iterate over all the nodes in this source
+    pub fn nodes(&mut self) -> impl Iterator<Item=StringNode> + '_ {
+        self.objects().filter_map(|o| o.into_node())
+    }
+
+    /// Iterate over all the ways in this source
+    pub fn ways(&mut self) -> impl Iterator<Item=StringWay> + '_ {
+        self.objects().filter_map(|o| o.into_way())
+    }
+
+    /// Iterate over all the relations in this source
+    pub fn relations(&mut self) -> impl Iterator<Item=StringRelation> + '_ {
+        self.objects().filter_map(|o| o.into_relation())
+    }
+
+}
+
 impl PBFReader<BufReader<File>> {
     /// Creates a PBF Reader from a path.
     pub fn from_filename(filename: impl AsRef<Path>) -> Result<Self> {
