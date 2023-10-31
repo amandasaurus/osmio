@@ -328,6 +328,7 @@ impl ChangesetTagReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
     }
 }
 
+
 impl<R: Read> ChangesetTagReader<R> {
     fn new(reader: R) -> Self {
         ChangesetTagReader {
@@ -338,6 +339,7 @@ impl<R: Read> ChangesetTagReader<R> {
     }
 
     /// The next changeset (& it's tags)
+    #[allow(clippy::type_complexity)]
     fn next_tag(&mut self) -> Result<Option<(u64, Vec<(String, String)>)>> {
         let mut buf = Vec::new();
         loop {

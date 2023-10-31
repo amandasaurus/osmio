@@ -333,7 +333,7 @@ impl OSMObjBase for StringNode {
         let key = key.as_ref();
         self._tags.as_ref().and_then(|tags| {
             tags.iter()
-                .filter_map(|(k, v)| if k == &key { Some(v.as_ref()) } else { None })
+                .filter_map(|(k, v)| if k == key { Some(v.as_ref()) } else { None })
                 .next()
         })
     }
@@ -365,7 +365,7 @@ impl OSMObjBase for StringNode {
             let idx = tags
                 .iter()
                 .enumerate()
-                .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+                .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
                 .next();
             if let Some(i) = idx {
                 tags.remove(i);
@@ -437,7 +437,7 @@ impl OSMObjBase for StringWay {
         let key = key.as_ref();
         self._tags
             .iter()
-            .filter_map(|(k, v)| if k == &key { Some(v.as_ref()) } else { None })
+            .filter_map(|(k, v)| if k == key { Some(v.as_ref()) } else { None })
             .next()
     }
 
@@ -448,7 +448,7 @@ impl OSMObjBase for StringWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
             .next();
         match idx {
             None => self._tags.push((key.to_string(), value)),
@@ -462,7 +462,7 @@ impl OSMObjBase for StringWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
             .next();
         if let Some(i) = idx {
             self._tags.remove(i);
@@ -539,7 +539,7 @@ impl OSMObjBase for StringRelation {
         let key = key.as_ref();
         self._tags
             .iter()
-            .filter_map(|(k, v)| if k == &key { Some(v.as_ref()) } else { None })
+            .filter_map(|(k, v)| if k == key { Some(v.as_ref()) } else { None })
             .next()
     }
 
@@ -550,7 +550,7 @@ impl OSMObjBase for StringRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
             .next();
         match idx {
             None => self._tags.push((key.to_string(), value)),
@@ -564,7 +564,7 @@ impl OSMObjBase for StringRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
             .next();
         if let Some(i) = idx {
             self._tags.remove(i);

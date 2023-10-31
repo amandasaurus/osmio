@@ -228,7 +228,7 @@ fn decode_ways(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
+    stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
     let ways = primitive_group.get_ways();
@@ -300,7 +300,7 @@ fn decode_relations(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
+    stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
     let _last_timestamp = 0;
@@ -385,7 +385,7 @@ fn decode_primitive_group_to_objs(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &Vec<Option<Arc<str>>>,
+    stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
     let date_granularity = date_granularity / 1000;

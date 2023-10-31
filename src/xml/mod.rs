@@ -157,7 +157,7 @@ pub(crate) fn extract_attrs(x: &mut XmlEvent) -> Option<&mut Vec<OwnedAttribute>
     }
 }
 
-pub(crate) fn get_xml_attribute<'a>(attrs: &mut Vec<OwnedAttribute>, key: &str) -> Option<String> {
+pub(crate) fn get_xml_attribute(attrs: &mut Vec<OwnedAttribute>, key: &str) -> Option<String> {
     attrs
         .iter()
         .position(|attr| attr.name.local_name == key)
@@ -168,7 +168,7 @@ pub(crate) fn get_xml_attribute<'a>(attrs: &mut Vec<OwnedAttribute>, key: &str) 
         })
 }
 
-fn get_tags(els: &mut Vec<XmlEvent>) -> Option<Vec<(String, String)>> {
+fn get_tags(els: &mut [XmlEvent]) -> Option<Vec<(String, String)>> {
     let mut result: Option<Vec<(String, String)>> = None;
     for el in els.iter_mut() {
         if let &mut XmlEvent::StartElement {
@@ -197,7 +197,7 @@ fn get_tags(els: &mut Vec<XmlEvent>) -> Option<Vec<(String, String)>> {
     result
 }
 
-fn get_nodes(els: &mut Vec<XmlEvent>) -> Vec<ObjId> {
+fn get_nodes(els: &mut [XmlEvent]) -> Vec<ObjId> {
     let mut result = Vec::new();
 
     for el in els.iter_mut() {
@@ -220,7 +220,7 @@ fn get_nodes(els: &mut Vec<XmlEvent>) -> Vec<ObjId> {
     result
 }
 
-fn get_members(els: &mut Vec<XmlEvent>) -> Vec<(OSMObjectType, ObjId, String)> {
+fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, String)> {
     let mut result = Vec::new();
 
     for el in els.iter_mut() {
@@ -246,7 +246,7 @@ fn get_members(els: &mut Vec<XmlEvent>) -> Vec<(OSMObjectType, ObjId, String)> {
     result
 }
 
-pub(crate) fn xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
+pub(crate) fn xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
     match els.first() {
         Some(XmlEvent::StartElement { name, .. }) => match name.local_name.as_str() {
             "node" => node_xml_elements_to_osm_obj(els),
@@ -258,7 +258,7 @@ pub(crate) fn xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringO
     }
 }
 
-fn node_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
+fn node_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
     let attrs = extract_attrs(els.first_mut()?)?;
     let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
     let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
@@ -297,7 +297,7 @@ fn node_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj>
     }))
 }
 
-fn way_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
+fn way_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
     let attrs = extract_attrs(els.first_mut()?)?;
     let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
     let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());
@@ -329,7 +329,7 @@ fn way_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> 
     }))
 }
 
-fn relation_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> {
+fn relation_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
     let attrs = extract_attrs(els.first_mut()?)?;
     let id: ObjId = get_xml_attribute(attrs, "id").and_then(|x| x.parse().ok())?;
     let version = get_xml_attribute(attrs, "version").and_then(|x| x.parse().ok());

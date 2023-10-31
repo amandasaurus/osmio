@@ -306,7 +306,7 @@ impl OSMObjBase for ArcNode {
         self._tags.as_ref().and_then(|tags| {
             tags.iter()
                 .filter_map(|(k, v)| {
-                    if &k.as_ref() == &key {
+                    if k.as_ref() == key {
                         Some(v.as_ref())
                     } else {
                         None
@@ -327,7 +327,7 @@ impl OSMObjBase for ArcNode {
                 let idx = tags
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                    .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
                     .next();
                 match idx {
                     None => tags.push((Arc::from(key), Arc::from(value.as_str()))),
@@ -343,7 +343,7 @@ impl OSMObjBase for ArcNode {
             let idx = tags
                 .iter()
                 .enumerate()
-                .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
                 .next();
             if let Some(i) = idx {
                 tags.remove(i);
@@ -416,7 +416,7 @@ impl OSMObjBase for ArcWay {
         self._tags
             .iter()
             .filter_map(|(k, v)| {
-                if &k.as_ref() == &key {
+                if k.as_ref() == key {
                     Some(v.as_ref())
                 } else {
                     None
@@ -432,7 +432,7 @@ impl OSMObjBase for ArcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         match idx {
             None => self._tags.push((Arc::from(key), Arc::from(value.as_str()))),
@@ -446,7 +446,7 @@ impl OSMObjBase for ArcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         if let Some(i) = idx {
             self._tags.remove(i);
@@ -526,7 +526,7 @@ impl OSMObjBase for ArcRelation {
         self._tags
             .iter()
             .filter_map(|(k, v)| {
-                if &k.as_ref() == &key {
+                if k.as_ref() == key {
                     Some(v.as_ref())
                 } else {
                     None
@@ -542,7 +542,7 @@ impl OSMObjBase for ArcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         match idx {
             None => self._tags.push((Arc::from(key), Arc::from(value.as_str()))),
@@ -556,7 +556,7 @@ impl OSMObjBase for ArcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         if let Some(i) = idx {
             self._tags.remove(i);

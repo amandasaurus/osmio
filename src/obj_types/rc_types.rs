@@ -308,7 +308,7 @@ impl OSMObjBase for RcNode {
                 let key = key.as_ref();
                 t.iter()
                     .filter_map(|(k, v)| {
-                        if &k.as_ref() == &key {
+                        if k.as_ref() == key {
                             Some(v.as_ref())
                         } else {
                             None
@@ -330,7 +330,7 @@ impl OSMObjBase for RcNode {
                 let idx = tags
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                    .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
                     .next();
                 match idx {
                     None => tags.push((Rc::from(key), Rc::from(value.as_str()))),
@@ -346,7 +346,7 @@ impl OSMObjBase for RcNode {
             let idx = tags
                 .iter()
                 .enumerate()
-                .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+                .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
                 .next();
             if let Some(i) = idx {
                 tags.remove(i);
@@ -419,7 +419,7 @@ impl OSMObjBase for RcWay {
         self._tags
             .iter()
             .filter_map(|(k, v)| {
-                if &k.as_ref() == &key {
+                if k.as_ref() == key {
                     Some(v.as_ref())
                 } else {
                     None
@@ -435,7 +435,7 @@ impl OSMObjBase for RcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         match idx {
             None => self._tags.push((Rc::from(key), Rc::from(value.as_str()))),
@@ -449,7 +449,7 @@ impl OSMObjBase for RcWay {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         if let Some(i) = idx {
             self._tags.remove(i);
@@ -529,7 +529,7 @@ impl OSMObjBase for RcRelation {
         self._tags
             .iter()
             .filter_map(|(k, v)| {
-                if &k.as_ref() == &key {
+                if k.as_ref() == key {
                     Some(v.as_ref())
                 } else {
                     None
@@ -545,7 +545,7 @@ impl OSMObjBase for RcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         match idx {
             None => self._tags.push((Rc::from(key), Rc::from(value.as_str()))),
@@ -559,7 +559,7 @@ impl OSMObjBase for RcRelation {
             ._tags
             .iter()
             .enumerate()
-            .filter_map(|(i, (k, _))| if &k.as_ref() == &key { Some(i) } else { None })
+            .filter_map(|(i, (k, _))| if k.as_ref() == key { Some(i) } else { None })
             .next();
         if let Some(i) = idx {
             self._tags.remove(i);

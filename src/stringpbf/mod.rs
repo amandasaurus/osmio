@@ -27,7 +27,7 @@ struct FileReader<R: Read> {
     reader: R,
 }
 
-fn blob_raw_data<'a>(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
+fn blob_raw_data(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     if blob.has_raw() {
@@ -92,7 +92,7 @@ fn decode_nodes(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    _stringtable: &Vec<Option<String>>,
+    _stringtable: &[Option<String>],
     _sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     unimplemented!("Dense node");
@@ -104,7 +104,7 @@ fn decode_dense_nodes(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &Vec<Option<String>>,
+    stringtable: &[Option<String>],
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
@@ -232,7 +232,7 @@ fn decode_ways(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &Vec<Option<String>>,
+    stringtable: &[Option<String>],
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
@@ -307,7 +307,7 @@ fn decode_relations(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &Vec<Option<String>>,
+    stringtable: &[Option<String>],
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let _last_timestamp = 0;
@@ -395,7 +395,7 @@ fn decode_primitive_group_to_objs(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &Vec<Option<String>>,
+    stringtable: &[Option<String>],
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let date_granularity = date_granularity / 1000;
