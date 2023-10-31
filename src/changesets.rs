@@ -328,7 +328,6 @@ impl ChangesetTagReader<bzip2::read::MultiBzDecoder<std::fs::File>> {
     }
 }
 
-
 impl<R: Read> ChangesetTagReader<R> {
     fn new(reader: R) -> Self {
         ChangesetTagReader {
