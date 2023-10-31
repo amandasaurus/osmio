@@ -1,4 +1,4 @@
-//! PBF/Protobuf file format
+//! PBF/Protobuf file format and return StringOSMObj's
 //!
 //! Reading PBF files. Writing/creating PBF files is not currently supported or implemented
 use super::OSMReader;
