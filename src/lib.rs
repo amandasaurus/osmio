@@ -43,6 +43,7 @@ use anyhow::Result;
 pub mod utils;
 
 pub mod pbf;
+pub mod arcpbf;
 pub mod xml;
 //pub mod opl;
 pub mod osc;
