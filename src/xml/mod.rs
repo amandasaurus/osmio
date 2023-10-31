@@ -324,7 +324,7 @@ fn way_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSMObj> 
         _timestamp: timestamp,
         _uid: uid,
         _user: user,
-        _tags: tags.unwrap_or_else(|| Vec::new()),
+        _tags: tags.unwrap_or_default(),
         _nodes: nodes,
     }))
 }
@@ -356,7 +356,7 @@ fn relation_xml_elements_to_osm_obj(els: &mut Vec<XmlEvent>) -> Option<StringOSM
         _timestamp: timestamp,
         _uid: uid,
         _user: user,
-        _tags: tags.unwrap_or_else(|| Vec::new()),
+        _tags: tags.unwrap_or_default(),
         _members: members,
     }))
 }

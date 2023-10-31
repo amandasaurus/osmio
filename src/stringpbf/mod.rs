@@ -449,7 +449,7 @@ fn decode_primitive_group_to_objs(
 
 fn decode_block_to_objs(
     mut block: osmformat::PrimitiveBlock,
-    mut sink: &mut VecDeque<StringOSMObj>,
+    sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let stringtable: Vec<Option<String>> = block
         .take_stringtable()
@@ -473,7 +473,7 @@ fn decode_block_to_objs(
             lon_offset,
             date_granularity,
             &stringtable,
-            &mut sink,
+            sink,
         );
     }
 
