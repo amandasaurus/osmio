@@ -1,4 +1,4 @@
-# Unreleased
+# v0.9.0 (2023-10-31)
 
 * Relicence from AGPL to MIT/Apache2.
 
