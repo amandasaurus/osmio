@@ -42,9 +42,9 @@ use anyhow::Result;
 #[macro_use]
 pub mod utils;
 
+pub mod arcpbf;
 pub mod pbf;
 pub mod stringpbf;
-pub mod arcpbf;
 pub mod xml;
 //pub mod opl;
 pub mod osc;

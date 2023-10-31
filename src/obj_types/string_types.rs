@@ -333,20 +333,12 @@ impl OSMObjBase for StringNode {
         let key = key.as_ref();
         self._tags.as_ref().and_then(|tags| {
             tags.iter()
-                .filter_map(|(k, v)| {
-                    if k == &key {
-                        Some(v.as_ref())
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(k, v)| if k == &key { Some(v.as_ref()) } else { None })
                 .next()
         })
     }
 
-
-    fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>)
-    {
+    fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
         let key: &str = key.as_ref();
         let value: String = value.into();
         match self._tags {
@@ -360,8 +352,8 @@ impl OSMObjBase for StringNode {
                     .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
                     .next();
                 match idx {
-                    None => { tags.push((key.to_string(), value)) },
-                    Some(i) => { tags[i] = (key.to_string(), value) },
+                    None => tags.push((key.to_string(), value)),
+                    Some(i) => tags[i] = (key.to_string(), value),
                 }
             }
         }
@@ -381,7 +373,6 @@ impl OSMObjBase for StringNode {
         }
     }
 }
-
 
 impl Node for StringNode {
     fn lat_lon(&self) -> Option<(Lat, Lon)> {
@@ -446,13 +437,7 @@ impl OSMObjBase for StringWay {
         let key = key.as_ref();
         self._tags
             .iter()
-            .filter_map(|(k, v)| {
-                if k == &key {
-                    Some(v.as_ref())
-                } else {
-                    None
-                }
-            })
+            .filter_map(|(k, v)| if k == &key { Some(v.as_ref()) } else { None })
             .next()
     }
 
@@ -466,8 +451,8 @@ impl OSMObjBase for StringWay {
             .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
             .next();
         match idx {
-            None => { self._tags.push((key.to_string(), value)) },
-            Some(i) => { self._tags[i] = (key.into(), value) },
+            None => self._tags.push((key.to_string(), value)),
+            Some(i) => self._tags[i] = (key.into(), value),
         }
     }
 
@@ -554,13 +539,7 @@ impl OSMObjBase for StringRelation {
         let key = key.as_ref();
         self._tags
             .iter()
-            .filter_map(|(k, v)| {
-                if k == &key {
-                    Some(v.as_ref())
-                } else {
-                    None
-                }
-            })
+            .filter_map(|(k, v)| if k == &key { Some(v.as_ref()) } else { None })
             .next()
     }
 
@@ -574,8 +553,8 @@ impl OSMObjBase for StringRelation {
             .filter_map(|(i, (k, _))| if k == &key { Some(i) } else { None })
             .next();
         match idx {
-            None => { self._tags.push((key.to_string(), value)) },
-            Some(i) => { self._tags[i] = (key.into(), value) },
+            None => self._tags.push((key.to_string(), value)),
+            Some(i) => self._tags[i] = (key.into(), value),
         }
     }
 

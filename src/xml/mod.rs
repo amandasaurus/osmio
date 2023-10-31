@@ -182,7 +182,9 @@ fn get_tags(els: &mut Vec<XmlEvent>) -> Option<Vec<(String, String)>> {
                 let vo = get_xml_attribute(attributes, "v");
                 if let (Some(k), Some(v)) = (ko, vo) {
                     match result {
-                        None => { result = Some(vec![(k, v)]); },
+                        None => {
+                            result = Some(vec![(k, v)]);
+                        }
                         Some(ref mut res) => {
                             res.push((k, v));
                         }
