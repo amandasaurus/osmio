@@ -1,32 +1,33 @@
-#![allow(warnings)]
-use super::OSMReader;
-use super::TimestampFormat;
 use crate::{Lat, Lon, ObjId};
-use byteorder;
-use byteorder::ReadBytesExt;
-use std::io::{Cursor, Read};
+use std::io::{Read};
 use std::iter::Iterator;
+
+use std::collections::VecDeque;
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
 
-use flate2::read::ZlibDecoder;
-
-use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
-
+/// (node id, (latitude, longitude))
 type NodeIdPos = (ObjId, (Lat, Lon));
 
-/// Reads a PBF file and returns just (nodeid, pos)
+/// Reads a PBF file and returns just (nodeid, pos). This is a little faster than reading the whole
+/// file
+///
+/// ```
+/// let mut reader =
+/// osmio::stringpbf::PBFNodePositionReader::from_filename("region-latest.osm.pbf")?;
+/// let (nid, (lat, lon)) = reader.next().unwrap();
+/// ```
 pub struct PBFNodePositionReader<R: Read> {
     filereader: FileReader<R>,
-    _buffer: Vec<NodeIdPos>,
+    buffer: VecDeque<NodeIdPos>,
 }
 
 impl PBFNodePositionReader<BufReader<File>> {
     fn new(reader: BufReader<File>) -> Self {
         Self {
             filereader: FileReader::new(reader),
-            _buffer: Vec::new(),
+            buffer: VecDeque::new(),
         }
     }
 
@@ -40,7 +41,7 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
     type Item = NodeIdPos;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self._buffer.is_empty() {
+        while self.buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel
 
@@ -51,28 +52,19 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
             let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
-            let mut objs = decode_block_to_objs(block);
-            if objs.is_none() {
-                continue;
-            }
-            let mut objs = objs.unwrap();
-
-            // we reverse the Vec so that we can .pop from the buffer, rather than .remove(0)
-            // IME pop'ing is faster, since it means less memory moving
-            objs.reverse();
-
-            self._buffer = objs;
+            let _num_objects_read = decode_block_to_objs(block, &mut self.buffer);
         }
 
-        self._buffer.pop()
+
+        self.buffer.pop_front()
     }
 }
 
-fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Option<Vec<NodeIdPos>> {
+fn decode_block_to_objs(block: osmformat::PrimitiveBlock, sink: &mut VecDeque<NodeIdPos>) -> usize {
     let granularity = block.get_granularity();
     let lat_offset = block.get_lat_offset();
     let lon_offset = block.get_lon_offset();
-    let mut results = None;
+    let mut num_objects = 0;
 
     for primitive_group in block.get_primitivegroup() {
         if !primitive_group.get_nodes().is_empty() {
@@ -86,10 +78,8 @@ fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Option<Vec<Node
             let ids = dense.get_id();
             let lats = dense.get_lat();
             let lons = dense.get_lon();
-            let denseinfo = dense.get_denseinfo();
 
             let num_nodes = ids.len();
-            let mut inner_result = Vec::with_capacity(num_nodes);
 
             // NB it's important that these start at zero, makes the code easier later
             let mut last_id: i64 = 0;
@@ -120,14 +110,14 @@ fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Option<Vec<Node
                 internal_lat += internal_lat_offset as i32;
                 internal_lon += internal_lon_offset as i32;
 
-                inner_result.push((id as ObjId, (Lat(internal_lat), Lon(internal_lon))));
+                sink.push_back((id as ObjId, (Lat(internal_lat), Lon(internal_lon))));
+                num_objects += 1;
             }
 
-            results = Some(inner_result)
         } else {
             unreachable!();
         }
     }
 
-    results
+    num_objects
 }
