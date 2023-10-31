@@ -1,5 +1,5 @@
 use crate::{Lat, Lon, ObjId};
-use std::io::{Read};
+use std::io::Read;
 use std::iter::Iterator;
 
 use std::collections::VecDeque;
@@ -54,7 +54,6 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
             // Turn a block into OSM objects
             let _num_objects_read = decode_block_to_objs(block, &mut self.buffer);
         }
-
 
         self.buffer.pop_front()
     }
@@ -113,7 +112,6 @@ fn decode_block_to_objs(block: osmformat::PrimitiveBlock, sink: &mut VecDeque<No
                 sink.push_back((id as ObjId, (Lat(internal_lat), Lon(internal_lon))));
                 num_objects += 1;
             }
-
         } else {
             unreachable!();
         }

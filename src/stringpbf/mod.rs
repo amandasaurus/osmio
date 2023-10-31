@@ -6,9 +6,9 @@ use super::ObjId;
 use super::TimestampFormat;
 use byteorder;
 use byteorder::ReadBytesExt;
+use std::collections::VecDeque;
 use std::io::{Cursor, Read};
 use std::iter::Iterator;
-use std::collections::VecDeque;
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
@@ -447,7 +447,10 @@ fn decode_primitive_group_to_objs(
     num_objects_written
 }
 
-fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock, mut sink: &mut VecDeque<StringOSMObj>) -> usize {
+fn decode_block_to_objs(
+    mut block: osmformat::PrimitiveBlock,
+    mut sink: &mut VecDeque<StringOSMObj>,
+) -> usize {
     let stringtable: Vec<Option<String>> = block
         .take_stringtable()
         .take_s()
@@ -494,20 +497,19 @@ pub struct PBFReader<R: Read> {
 
 impl<R: Read> PBFReader<R> {
     /// Iterate over all the nodes in this source
-    pub fn nodes(&mut self) -> impl Iterator<Item=StringNode> + '_ {
+    pub fn nodes(&mut self) -> impl Iterator<Item = StringNode> + '_ {
         self.objects().filter_map(|o| o.into_node())
     }
 
     /// Iterate over all the ways in this source
-    pub fn ways(&mut self) -> impl Iterator<Item=StringWay> + '_ {
+    pub fn ways(&mut self) -> impl Iterator<Item = StringWay> + '_ {
         self.objects().filter_map(|o| o.into_way())
     }
 
     /// Iterate over all the relations in this source
-    pub fn relations(&mut self) -> impl Iterator<Item=StringRelation> + '_ {
+    pub fn relations(&mut self) -> impl Iterator<Item = StringRelation> + '_ {
         self.objects().filter_map(|o| o.into_relation())
     }
-
 }
 
 impl PBFReader<BufReader<File>> {
@@ -558,7 +560,6 @@ impl<R: Read> OSMReader for PBFReader<R> {
 
             // Turn a block into OSM objects
             decode_block_to_objs(block, &mut self.buffer);
-
         }
 
         self.buffer.pop_front()
