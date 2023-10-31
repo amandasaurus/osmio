@@ -8,6 +8,7 @@ use byteorder;
 use byteorder::ReadBytesExt;
 use std::io::{Cursor, Read};
 use std::iter::Iterator;
+use std::collections::VecDeque;
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
@@ -92,8 +93,8 @@ fn decode_nodes(
     _lon_offset: i64,
     _date_granularity: i32,
     _stringtable: &Vec<Option<String>>,
-    _results: &mut Vec<StringOSMObj>,
-) {
+    _sink: &mut VecDeque<StringOSMObj>,
+) -> usize {
     unimplemented!("Dense node");
 }
 
@@ -104,8 +105,9 @@ fn decode_dense_nodes(
     lon_offset: i64,
     date_granularity: i32,
     stringtable: &Vec<Option<String>>,
-    results: &mut Vec<StringOSMObj>,
-) {
+    results: &mut VecDeque<StringOSMObj>,
+) -> usize {
+    let mut num_objects_written = 0;
     let dense = primitive_group.get_dense();
     let ids = dense.get_id();
     let lats = dense.get_lat();
@@ -207,7 +209,7 @@ fn decode_dense_nodes(
         let timestamp = TimestampFormat::EpochNunber(timestamp as i64);
         assert!(uid_id < std::i32::MAX);
 
-        results.push(StringOSMObj::Node(StringNode {
+        results.push_back(StringOSMObj::Node(StringNode {
             _id: id as ObjId,
             _tags: tags,
             _lat_lon: Some((Lat(internal_lat), Lon(internal_lon))),
@@ -218,9 +220,10 @@ fn decode_dense_nodes(
             _version: Some(denseinfo.get_version()[index] as u32),
             _timestamp: Some(timestamp),
         }));
+        num_objects_written += 1
     }
 
-    // convert the keys_vals to
+    num_objects_written
 }
 
 fn decode_ways(
@@ -230,8 +233,9 @@ fn decode_ways(
     _lon_offset: i64,
     _date_granularity: i32,
     stringtable: &Vec<Option<String>>,
-    results: &mut Vec<StringOSMObj>,
-) {
+    results: &mut VecDeque<StringOSMObj>,
+) -> usize {
+    let mut num_objects_written = 0;
     let ways = primitive_group.get_ways();
     results.reserve(ways.len());
     for way in ways {
@@ -276,7 +280,7 @@ fn decode_ways(
         //let timestamp = epoch_to_iso(timestamp);
         let timestamp = TimestampFormat::EpochNunber(way.get_info().get_timestamp());
 
-        results.push(StringOSMObj::Way(StringWay {
+        results.push_back(StringOSMObj::Way(StringWay {
             _id: id,
             _tags: tags,
             _nodes: nodes,
@@ -292,7 +296,9 @@ fn decode_ways(
             _version: Some(way.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
         }));
+        num_objects_written += 1;
     }
+    num_objects_written
 }
 
 fn decode_relations(
@@ -302,9 +308,10 @@ fn decode_relations(
     _lon_offset: i64,
     _date_granularity: i32,
     stringtable: &Vec<Option<String>>,
-    results: &mut Vec<StringOSMObj>,
-) {
+    sink: &mut VecDeque<StringOSMObj>,
+) -> usize {
     let _last_timestamp = 0;
+    let mut num_objects_written = 0;
     for relation in primitive_group.get_relations() {
         let id = relation.get_id() as ObjId;
         // TODO check for +itive keys/vals
@@ -362,7 +369,7 @@ fn decode_relations(
         //let timestamp = epoch_to_iso(timestamp);
         let timestamp = TimestampFormat::EpochNunber(relation.get_info().get_timestamp());
 
-        results.push(StringOSMObj::Relation(StringRelation {
+        sink.push_back(StringOSMObj::Relation(StringRelation {
             _id: id,
             _tags: tags,
             _members: members,
@@ -377,7 +384,9 @@ fn decode_relations(
             _version: Some(relation.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
         }));
+        num_objects_written += 1;
     }
+    num_objects_written
 }
 
 fn decode_primitive_group_to_objs(
@@ -387,55 +396,58 @@ fn decode_primitive_group_to_objs(
     lon_offset: i64,
     date_granularity: i32,
     stringtable: &Vec<Option<String>>,
-    results: &mut Vec<StringOSMObj>,
-) {
+    sink: &mut VecDeque<StringOSMObj>,
+) -> usize {
     let date_granularity = date_granularity / 1000;
+    let mut num_objects_written = 0;
     if !primitive_group.get_nodes().is_empty() {
-        decode_nodes(
+        num_objects_written += decode_nodes(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
             stringtable,
-            results,
+            sink,
         );
     } else if primitive_group.has_dense() {
-        decode_dense_nodes(
+        num_objects_written += decode_dense_nodes(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
             stringtable,
-            results,
+            sink,
         );
     } else if !primitive_group.get_ways().is_empty() {
-        decode_ways(
+        num_objects_written += decode_ways(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
             stringtable,
-            results,
+            sink,
         );
     } else if !primitive_group.get_relations().is_empty() {
-        decode_relations(
+        num_objects_written += decode_relations(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
             stringtable,
-            results,
+            sink,
         );
     } else {
         unreachable!();
     }
+
+    num_objects_written
 }
 
-fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<StringOSMObj> {
+fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock, mut sink: &mut VecDeque<StringOSMObj>) -> usize {
     let stringtable: Vec<Option<String>> = block
         .take_stringtable()
         .take_s()
@@ -448,17 +460,17 @@ fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<StringOSMOb
     let lon_offset = block.get_lon_offset();
     let date_granularity = block.get_date_granularity();
 
-    let mut results: Vec<StringOSMObj> = Vec::new();
+    let mut results = 0;
 
     for primitive_group in block.get_primitivegroup() {
-        decode_primitive_group_to_objs(
+        results += decode_primitive_group_to_objs(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
             &stringtable,
-            &mut results,
+            &mut sink,
         );
     }
 
@@ -476,7 +488,7 @@ impl<R: Read> Iterator for FileReader<R> {
 /// A thing that read PBF files
 pub struct PBFReader<R: Read> {
     filereader: FileReader<R>,
-    buffer: Vec<StringOSMObj>,
+    buffer: VecDeque<StringOSMObj>,
     _sorted_assumption: bool,
 }
 
@@ -495,7 +507,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
     fn new(reader: R) -> PBFReader<R> {
         PBFReader {
             filereader: FileReader::new(reader),
-            buffer: Vec::new(),
+            buffer: VecDeque::new(),
             _sorted_assumption: false,
         }
     }
@@ -527,15 +539,10 @@ impl<R: Read> OSMReader for PBFReader<R> {
             let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
-            let mut objs = decode_block_to_objs(block);
+            decode_block_to_objs(block, &mut self.buffer);
 
-            // we reverse the Vec so that we can .pop from the buffer, rather than .remove(0)
-            // IME pop'ing is faster, since it means less memory moving
-            objs.reverse();
-
-            self.buffer = objs;
         }
 
-        self.buffer.pop()
+        self.buffer.pop_front()
     }
 }
