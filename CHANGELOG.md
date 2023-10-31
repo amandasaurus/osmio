@@ -1,6 +1,12 @@
+# Unreleased
+
+* Internal refactoring to speed up
+* Can now read a PBF file and just get the node ids & positions
+
 # v0.9.0 (2023-10-31)
 
 * Relicence from AGPL to MIT/Apache2.
+* PBF reader returns StringOSMObj
 
 # v0.8.1 (2023-07-25)
 
