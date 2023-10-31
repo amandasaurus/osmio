@@ -19,6 +19,7 @@ use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 use protobuf;
 mod fileformat;
 mod osmformat;
+mod node_id_pos;
 
 struct FileReader<R: Read> {
     reader: R,
