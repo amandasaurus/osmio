@@ -189,12 +189,6 @@ impl OSMObjBase for StringOSMObj {
             StringOSMObj::Relation(x) => x.unset_tag(key),
         }
     }
-}
-
-impl OSMObj for StringOSMObj {
-    type Node = StringNode;
-    type Way = StringWay;
-    type Relation = StringRelation;
 
     fn object_type(&self) -> OSMObjectType {
         match self {
@@ -203,6 +197,13 @@ impl OSMObj for StringOSMObj {
             StringOSMObj::Relation(_) => OSMObjectType::Relation,
         }
     }
+}
+
+impl OSMObj for StringOSMObj {
+    type Node = StringNode;
+    type Way = StringWay;
+    type Relation = StringRelation;
+
 
     fn into_node(self) -> Option<StringNode> {
         if let StringOSMObj::Node(n) = self {
@@ -372,6 +373,10 @@ impl OSMObjBase for StringNode {
             }
         }
     }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Node
+    }
 }
 
 impl Node for StringNode {
@@ -467,6 +472,10 @@ impl OSMObjBase for StringWay {
         if let Some(i) = idx {
             self._tags.remove(i);
         }
+    }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Way
     }
 }
 
@@ -569,6 +578,10 @@ impl OSMObjBase for StringRelation {
         if let Some(i) = idx {
             self._tags.remove(i);
         }
+    }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Relation
     }
 }
 

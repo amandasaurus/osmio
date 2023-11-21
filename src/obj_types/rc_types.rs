@@ -161,12 +161,6 @@ impl OSMObjBase for RcOSMObj {
             RcOSMObj::Relation(x) => x.unset_tag(key),
         }
     }
-}
-
-impl OSMObj for RcOSMObj {
-    type Node = RcNode;
-    type Way = RcWay;
-    type Relation = RcRelation;
 
     fn object_type(&self) -> OSMObjectType {
         match self {
@@ -175,6 +169,13 @@ impl OSMObj for RcOSMObj {
             RcOSMObj::Relation(_) => OSMObjectType::Relation,
         }
     }
+}
+
+impl OSMObj for RcOSMObj {
+    type Node = RcNode;
+    type Way = RcWay;
+    type Relation = RcRelation;
+
 
     fn into_node(self) -> Option<RcNode> {
         if let RcOSMObj::Node(n) = self {
@@ -353,6 +354,10 @@ impl OSMObjBase for RcNode {
             }
         }
     }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Node
+    }
 }
 
 impl Node for RcNode {
@@ -454,6 +459,10 @@ impl OSMObjBase for RcWay {
         if let Some(i) = idx {
             self._tags.remove(i);
         }
+    }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Way
     }
 }
 
@@ -564,6 +573,10 @@ impl OSMObjBase for RcRelation {
         if let Some(i) = idx {
             self._tags.remove(i);
         }
+    }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Relation
     }
 }
 

@@ -1,3 +1,7 @@
+# Unreleased
+
+* `.object_type()` moved to method on `OSMObjBase`
+
 # v0.10.0 (2023-11-14)
 
 * Internal refactoring to speed up

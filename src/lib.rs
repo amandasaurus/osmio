@@ -359,6 +359,8 @@ pub trait OSMObjBase: PartialEq + Debug + Clone {
         self.set_user(None);
         self.set_changeset_id(None);
     }
+
+    fn object_type(&self) -> OSMObjectType;
 }
 
 /// A Node
@@ -422,6 +424,7 @@ pub trait Node: OSMObjBase {
         }
         Ok(())
     }
+
 }
 
 /// A Way
@@ -538,7 +541,6 @@ pub trait OSMObj: OSMObjBase {
     /// The type of the Relation type
     type Relation: Relation;
 
-    fn object_type(&self) -> OSMObjectType;
 
     fn into_node(self) -> Option<Self::Node>;
     fn into_way(self) -> Option<Self::Way>;

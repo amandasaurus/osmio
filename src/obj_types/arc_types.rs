@@ -161,12 +161,6 @@ impl OSMObjBase for ArcOSMObj {
             ArcOSMObj::Relation(x) => x.unset_tag(key),
         }
     }
-}
-
-impl OSMObj for ArcOSMObj {
-    type Node = ArcNode;
-    type Way = ArcWay;
-    type Relation = ArcRelation;
 
     fn object_type(&self) -> OSMObjectType {
         match self {
@@ -175,6 +169,13 @@ impl OSMObj for ArcOSMObj {
             ArcOSMObj::Relation(_) => OSMObjectType::Relation,
         }
     }
+}
+
+impl OSMObj for ArcOSMObj {
+    type Node = ArcNode;
+    type Way = ArcWay;
+    type Relation = ArcRelation;
+
 
     fn into_node(self) -> Option<ArcNode> {
         if let ArcOSMObj::Node(n) = self {
@@ -350,6 +351,11 @@ impl OSMObjBase for ArcNode {
             }
         }
     }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Node
+    }
+
 }
 
 impl Node for ArcNode {
@@ -360,6 +366,7 @@ impl Node for ArcNode {
     fn set_lat_lon_direct(&mut self, loc: Option<(Lat, Lon)>) {
         self._lat_lon = loc;
     }
+
 }
 
 impl OSMObjBase for ArcWay {
@@ -451,6 +458,10 @@ impl OSMObjBase for ArcWay {
         if let Some(i) = idx {
             self._tags.remove(i);
         }
+    }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Way
     }
 }
 
@@ -562,6 +573,11 @@ impl OSMObjBase for ArcRelation {
             self._tags.remove(i);
         }
     }
+
+    fn object_type(&self) -> OSMObjectType {
+        OSMObjectType::Relation
+    }
+
 }
 
 impl Relation for ArcRelation {
