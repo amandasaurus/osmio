@@ -1,5 +1,6 @@
-# Unreleased
+# v0.11.0 (2023-11-23)
 
+* Speed up when reading just nodes/ways/relations.
 * `.object_type()` moved to method on `OSMObjBase`
 
 # v0.10.0 (2023-11-14)
