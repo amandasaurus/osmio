@@ -204,7 +204,6 @@ impl OSMObj for StringOSMObj {
     type Way = StringWay;
     type Relation = StringRelation;
 
-
     fn into_node(self) -> Option<StringNode> {
         if let StringOSMObj::Node(n) = self {
             Some(n)

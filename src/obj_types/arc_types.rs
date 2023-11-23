@@ -176,7 +176,6 @@ impl OSMObj for ArcOSMObj {
     type Way = ArcWay;
     type Relation = ArcRelation;
 
-
     fn into_node(self) -> Option<ArcNode> {
         if let ArcOSMObj::Node(n) = self {
             Some(n)
@@ -355,7 +354,6 @@ impl OSMObjBase for ArcNode {
     fn object_type(&self) -> OSMObjectType {
         OSMObjectType::Node
     }
-
 }
 
 impl Node for ArcNode {
@@ -366,7 +364,6 @@ impl Node for ArcNode {
     fn set_lat_lon_direct(&mut self, loc: Option<(Lat, Lon)>) {
         self._lat_lon = loc;
     }
-
 }
 
 impl OSMObjBase for ArcWay {
@@ -577,7 +574,6 @@ impl OSMObjBase for ArcRelation {
     fn object_type(&self) -> OSMObjectType {
         OSMObjectType::Relation
     }
-
 }
 
 impl Relation for ArcRelation {

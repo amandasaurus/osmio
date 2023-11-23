@@ -29,7 +29,11 @@ struct FileReader<R: Read> {
     reader: R,
 }
 
-fn blob_raw_data(blob: &mut fileformat::Blob, mut buf: &mut Vec<u8>, _object_filter: &ObjectFilter) {
+fn blob_raw_data(
+    blob: &mut fileformat::Blob,
+    mut buf: &mut Vec<u8>,
+    _object_filter: &ObjectFilter,
+) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     buf.truncate(0);

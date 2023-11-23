@@ -424,7 +424,6 @@ pub trait Node: OSMObjBase {
         }
         Ok(())
     }
-
 }
 
 /// A Way
@@ -541,7 +540,6 @@ pub trait OSMObj: OSMObjBase {
     /// The type of the Relation type
     type Relation: Relation;
 
-
     fn into_node(self) -> Option<Self::Node>;
     fn into_way(self) -> Option<Self::Way>;
     fn into_relation(self) -> Option<Self::Relation>;
@@ -605,20 +603,25 @@ pub trait OSMReader {
         OSMObjectIterator { inner: self }
     }
 
-    fn nodes(&mut self) -> Box<dyn Iterator<Item=<<Self as OSMReader>::Obj as OSMObj>::Node> + '_> 
-    where Self: Sized
+    fn nodes(&mut self) -> Box<dyn Iterator<Item = <<Self as OSMReader>::Obj as OSMObj>::Node> + '_>
+    where
+        Self: Sized,
     {
         Box::new(self.objects().filter_map(|o| o.into_node()))
     }
 
-    fn ways(&mut self) -> Box<dyn Iterator<Item=<<Self as OSMReader>::Obj as OSMObj>::Way> + '_> 
-    where Self: Sized
+    fn ways(&mut self) -> Box<dyn Iterator<Item = <<Self as OSMReader>::Obj as OSMObj>::Way> + '_>
+    where
+        Self: Sized,
     {
         Box::new(self.objects().filter_map(|o| o.into_way()))
     }
 
-    fn relations(&mut self) -> Box<dyn Iterator<Item=<<Self as OSMReader>::Obj as OSMObj>::Relation> + '_> 
-    where Self: Sized
+    fn relations(
+        &mut self,
+    ) -> Box<dyn Iterator<Item = <<Self as OSMReader>::Obj as OSMObj>::Relation> + '_>
+    where
+        Self: Sized,
     {
         Box::new(self.objects().filter_map(|o| o.into_relation()))
     }

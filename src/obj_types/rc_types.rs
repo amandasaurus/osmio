@@ -176,7 +176,6 @@ impl OSMObj for RcOSMObj {
     type Way = RcWay;
     type Relation = RcRelation;
 
-
     fn into_node(self) -> Option<RcNode> {
         if let RcOSMObj::Node(n) = self {
             Some(n)
