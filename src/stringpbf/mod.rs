@@ -27,20 +27,18 @@ struct FileReader<R: Read> {
     reader: R,
 }
 
-fn blob_raw_data(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
+fn blob_raw_data(blob: &mut fileformat::Blob, mut buf: &mut Vec<u8>) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
+    buf.truncate(0);
     if blob.has_raw() {
-        Some(blob.take_raw())
+        let raw = blob.get_raw();
+        buf.reserve(raw.len());
+        buf.copy_from_slice(&raw);
     } else if blob.has_zlib_data() {
         let zlib_data = blob.get_zlib_data();
         let cursor = Cursor::new(zlib_data);
-        let mut bytes = Vec::with_capacity(blob.get_raw_size() as usize);
-        ZlibDecoder::new(cursor).read_to_end(&mut bytes).ok()?;
-
-        Some(bytes)
-    } else {
-        None
+        ZlibDecoder::new(cursor).read_to_end(&mut buf).unwrap();
     }
 }
 
@@ -548,6 +546,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
     }
 
     fn next(&mut self) -> Option<StringOSMObj> {
+        let mut blob_data = Vec::new();
         while self.buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel
@@ -555,7 +554,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
             // get the next block
             let mut blob = self.filereader.next()?;
 
-            let blob_data = blob_raw_data(&mut blob).unwrap();
+            blob_raw_data(&mut blob, &mut blob_data);
             let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects

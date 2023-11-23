@@ -41,6 +41,7 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
     type Item = NodeIdPos;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let mut blob_data = Vec::new();
         while self.buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel
@@ -48,7 +49,7 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
             // get the next block
             let mut blob = self.filereader.next()?;
 
-            let blob_data = blob_raw_data(&mut blob).unwrap();
+            blob_raw_data(&mut blob, &mut blob_data);
             let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
