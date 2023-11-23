@@ -605,13 +605,23 @@ pub trait OSMReader {
         OSMObjectIterator { inner: self }
     }
 
-    //fn nodes<'a, N: Node>(&'a mut self) -> Box<dyn Iterator<Item=N>+'a> where Self:Sized {
-    //    if self.get_sorted_assumption() {
-    //        Box::new(self.objects().take_while(|o| o.is_node()).filter_map(|o| o.into_node()))
-    //    } else {
-    //        Box::new(self.objects().filter_map(|o| o.into_node()))
-    //    }
-    //}
+    fn nodes(&mut self) -> Box<dyn Iterator<Item=<<Self as OSMReader>::Obj as OSMObj>::Node> + '_> 
+    where Self: Sized
+    {
+        Box::new(self.objects().filter_map(|o| o.into_node()))
+    }
+
+    fn ways(&mut self) -> Box<dyn Iterator<Item=<<Self as OSMReader>::Obj as OSMObj>::Way> + '_> 
+    where Self: Sized
+    {
+        Box::new(self.objects().filter_map(|o| o.into_way()))
+    }
+
+    fn relations(&mut self) -> Box<dyn Iterator<Item=<<Self as OSMReader>::Obj as OSMObj>::Relation> + '_> 
+    where Self: Sized
+    {
+        Box::new(self.objects().filter_map(|o| o.into_relation()))
+    }
 
     //fn nodes_locations<'a>(&'a mut self) -> Box<Iterator<Item=(ObjId, Lat, Lon)>+'a> where Self:Sized {
     //    Box::new(self.nodes().filter_map(|n| if n.deleted || n.lat.is_none() { None } else { Some((n.id, n.lat.unwrap(), n.lon.unwrap())) } ))
