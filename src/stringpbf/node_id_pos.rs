@@ -49,7 +49,7 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
             // get the next block
             let mut blob = self.filereader.next()?;
 
-            blob_raw_data(&mut blob, &mut blob_data);
+            blob_raw_data(&mut blob, &mut blob_data, &(true, false, false));
             let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects

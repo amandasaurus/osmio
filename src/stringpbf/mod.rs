@@ -23,11 +23,13 @@ mod node_id_pos;
 mod osmformat;
 pub use self::node_id_pos::PBFNodePositionReader;
 
+type ObjectFilter = (bool, bool, bool);
+
 struct FileReader<R: Read> {
     reader: R,
 }
 
-fn blob_raw_data(blob: &mut fileformat::Blob, mut buf: &mut Vec<u8>) {
+fn blob_raw_data(blob: &mut fileformat::Blob, mut buf: &mut Vec<u8>, _object_filter: &ObjectFilter) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     buf.truncate(0);
@@ -394,11 +396,12 @@ fn decode_primitive_group_to_objs(
     lon_offset: i64,
     date_granularity: i32,
     stringtable: &[Option<String>],
+    object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let date_granularity = date_granularity / 1000;
     let mut num_objects_written = 0;
-    if !primitive_group.get_nodes().is_empty() {
+    if !primitive_group.get_nodes().is_empty() && object_filter.0 {
         num_objects_written += decode_nodes(
             primitive_group,
             granularity,
@@ -408,7 +411,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             sink,
         );
-    } else if primitive_group.has_dense() {
+    } else if primitive_group.has_dense() && object_filter.0 {
         num_objects_written += decode_dense_nodes(
             primitive_group,
             granularity,
@@ -418,7 +421,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             sink,
         );
-    } else if !primitive_group.get_ways().is_empty() {
+    } else if !primitive_group.get_ways().is_empty() && object_filter.1 {
         num_objects_written += decode_ways(
             primitive_group,
             granularity,
@@ -428,7 +431,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             sink,
         );
-    } else if !primitive_group.get_relations().is_empty() {
+    } else if !primitive_group.get_relations().is_empty() && object_filter.2 {
         num_objects_written += decode_relations(
             primitive_group,
             granularity,
@@ -439,7 +442,7 @@ fn decode_primitive_group_to_objs(
             sink,
         );
     } else {
-        unreachable!();
+        // can happen if there is an object filter in operation
     }
 
     num_objects_written
@@ -447,6 +450,7 @@ fn decode_primitive_group_to_objs(
 
 fn decode_block_to_objs(
     mut block: osmformat::PrimitiveBlock,
+    object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let stringtable: Vec<Option<String>> = block
@@ -471,6 +475,7 @@ fn decode_block_to_objs(
             lon_offset,
             date_granularity,
             &stringtable,
+            object_filter,
             sink,
         );
     }
@@ -491,21 +496,25 @@ pub struct PBFReader<R: Read> {
     filereader: FileReader<R>,
     buffer: VecDeque<StringOSMObj>,
     _sorted_assumption: bool,
+    object_filter: ObjectFilter,
 }
 
 impl<R: Read> PBFReader<R> {
     /// Iterate over all the nodes in this source
     pub fn nodes(&mut self) -> impl Iterator<Item = StringNode> + '_ {
+        self.object_filter = (true, false, false);
         self.objects().filter_map(|o| o.into_node())
     }
 
     /// Iterate over all the ways in this source
     pub fn ways(&mut self) -> impl Iterator<Item = StringWay> + '_ {
+        self.object_filter = (false, true, false);
         self.objects().filter_map(|o| o.into_way())
     }
 
     /// Iterate over all the relations in this source
     pub fn relations(&mut self) -> impl Iterator<Item = StringRelation> + '_ {
+        self.object_filter = (false, false, true);
         self.objects().filter_map(|o| o.into_relation())
     }
 }
@@ -527,6 +536,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
             filereader: FileReader::new(reader),
             buffer: VecDeque::new(),
             _sorted_assumption: false,
+            object_filter: (true, true, true),
         }
     }
 
@@ -554,11 +564,16 @@ impl<R: Read> OSMReader for PBFReader<R> {
             // get the next block
             let mut blob = self.filereader.next()?;
 
-            blob_raw_data(&mut blob, &mut blob_data);
+            blob_data.truncate(0);
+            blob_raw_data(&mut blob, &mut blob_data, &self.object_filter);
+            if blob_data.is_empty() {
+                // maybe the filter meant nothing was read
+                continue;
+            }
             let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
-            decode_block_to_objs(block, &mut self.buffer);
+            decode_block_to_objs(block, &self.object_filter, &mut self.buffer);
         }
 
         self.buffer.pop_front()
