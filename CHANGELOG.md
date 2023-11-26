@@ -3,6 +3,7 @@
 # Unreleased
 
 * Expose inner function so users can use inner latlongs w/o temp allocations
+* Switch backing protobuf decoding library for stringpbf
 
 # v0.11.0 (2023-11-23)
 

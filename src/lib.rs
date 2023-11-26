@@ -15,6 +15,7 @@ extern crate byteorder;
 extern crate chrono;
 extern crate flate2;
 extern crate protobuf;
+extern crate quick_protobuf;
 extern crate quick_xml;
 extern crate xml as xml_rs;
 #[macro_use]

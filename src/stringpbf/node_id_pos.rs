@@ -19,14 +19,14 @@ type NodeIdPos = (ObjId, (Lat, Lon));
 /// let (nid, (lat, lon)) = reader.next().unwrap();
 /// ```
 pub struct PBFNodePositionReader<R: Read> {
-    filereader: FileReader<R>,
+    reader: R,
     buffer: VecDeque<NodeIdPos>,
 }
 
 impl PBFNodePositionReader<BufReader<File>> {
     fn new(reader: BufReader<File>) -> Self {
         Self {
-            filereader: FileReader::new(reader),
+            reader,
             buffer: VecDeque::new(),
         }
     }
@@ -41,43 +41,79 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
     type Item = NodeIdPos;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut blob_data = Vec::new();
+        let mut blob_bytes = Vec::new();
+        let mut blob_raw_bytes = Vec::new();
+        let mut blob;
+
         while self.buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel
 
             // get the next block
-            let mut blob = self.filereader.next()?;
+            // FIXME is there a way we can ask self.reader if it's at EOF? Rather than waiting for
+            // the failure and catching that?
 
-            blob_raw_data(&mut blob, &mut blob_data, &(true, false, false));
-            let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
+            // read the next blob
+            loop {
+                let size = self.reader.read_u32::<byteorder::BigEndian>().ok()?;
+                let mut header_bytes_vec = vec![0; size as usize];
+
+                self.reader
+                    .read_exact(header_bytes_vec.as_mut_slice())
+                    .unwrap();
+
+                let mut reader = BytesReader::from_bytes(&header_bytes_vec);
+                
+                let blob_header = fileformat::BlobHeader::from_reader(&mut reader, &header_bytes_vec).unwrap();
+
+                blob_bytes.resize(blob_header.datasize as usize, 0);
+                self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
+
+                if blob_header.type_pb != "OSMData" {
+                    // keep going to the next blob
+                    continue;
+                }
+
+                let mut reader = BytesReader::from_bytes(&blob_bytes);
+
+                blob = fileformat::Blob::from_reader(&mut reader, &blob_bytes).unwrap();
+                break;
+            }
+
+            blob_raw_bytes.truncate(0);
+            blob_raw_data(&mut blob, &mut blob_raw_bytes);
+            if blob_raw_bytes.is_empty() {
+                // maybe the filter meant nothing was read
+                continue;
+            }
+            let mut reader = BytesReader::from_bytes(&blob_raw_bytes);
+            let block = OSMPBF::PrimitiveBlock::from_reader(&mut reader, &blob_raw_bytes).unwrap();
 
             // Turn a block into OSM objects
-            let _num_objects_read = decode_block_to_objs(block, &mut self.buffer);
+            decode_block_to_objs(block, &mut self.buffer);
         }
 
         self.buffer.pop_front()
     }
 }
 
-fn decode_block_to_objs(block: osmformat::PrimitiveBlock, sink: &mut VecDeque<NodeIdPos>) -> usize {
-    let granularity = block.get_granularity();
-    let lat_offset = block.get_lat_offset();
-    let lon_offset = block.get_lon_offset();
+fn decode_block_to_objs(block: OSMPBF::PrimitiveBlock, sink: &mut VecDeque<NodeIdPos>) -> usize {
+    let granularity = block.granularity;
+    let lat_offset = block.lat_offset;
+    let lon_offset = block.lon_offset;
     let mut num_objects = 0;
 
-    for primitive_group in block.get_primitivegroup() {
-        if !primitive_group.get_nodes().is_empty() {
+    for primitive_group in block.primitivegroup.into_iter() {
+        if !primitive_group.nodes.is_empty() {
             unimplemented!()
-        } else if !primitive_group.get_ways().is_empty()
-            || !primitive_group.get_relations().is_empty()
+        } else if !primitive_group.ways.is_empty()
+            || !primitive_group.relations.is_empty()
         {
             continue;
-        } else if primitive_group.has_dense() {
-            let dense = primitive_group.get_dense();
-            let ids = dense.get_id();
-            let lats = dense.get_lat();
-            let lons = dense.get_lon();
+        } else if let Some(dense) = primitive_group.dense {
+            let ids = dense.id;
+            let lats = dense.lat;
+            let lons = dense.lon;
 
             let num_nodes = ids.len();
 
