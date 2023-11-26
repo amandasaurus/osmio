@@ -63,8 +63,9 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
                     .unwrap();
 
                 let mut reader = BytesReader::from_bytes(&header_bytes_vec);
-                
-                let blob_header = fileformat::BlobHeader::from_reader(&mut reader, &header_bytes_vec).unwrap();
+
+                let blob_header =
+                    fileformat::BlobHeader::from_reader(&mut reader, &header_bytes_vec).unwrap();
 
                 blob_bytes.resize(blob_header.datasize as usize, 0);
                 self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
@@ -106,9 +107,7 @@ fn decode_block_to_objs(block: OSMPBF::PrimitiveBlock, sink: &mut VecDeque<NodeI
     for primitive_group in block.primitivegroup.into_iter() {
         if !primitive_group.nodes.is_empty() {
             unimplemented!()
-        } else if !primitive_group.ways.is_empty()
-            || !primitive_group.relations.is_empty()
-        {
+        } else if !primitive_group.ways.is_empty() || !primitive_group.relations.is_empty() {
             continue;
         } else if let Some(dense) = primitive_group.dense {
             let ids = dense.id;

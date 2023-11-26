@@ -7,10 +7,10 @@ use super::ObjId;
 use super::TimestampFormat;
 use byteorder;
 use byteorder::ReadBytesExt;
+use quick_protobuf::{BytesReader, MessageRead};
 use std::collections::VecDeque;
 use std::io::{Cursor, Read};
 use std::iter::Iterator;
-use quick_protobuf::{MessageRead, BytesReader};
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
@@ -20,22 +20,24 @@ use flate2::read::ZlibDecoder;
 use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 
 use protobuf;
+mod OSMPBF;
 mod fileformat;
 mod node_id_pos;
-mod OSMPBF;
 pub use self::node_id_pos::PBFNodePositionReader;
 use quick_protobuf::reader::deserialize_from_slice;
 
 type ObjectFilter = (bool, bool, bool);
 
-fn blob_raw_data(
-    blob: &mut fileformat::Blob,
-    mut buf: &mut Vec<u8>,
-) {
+fn blob_raw_data(blob: &mut fileformat::Blob, mut buf: &mut Vec<u8>) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     buf.truncate(0);
-    let fileformat::Blob { raw, raw_size, zlib_data, lzma_data } = blob;
+    let fileformat::Blob {
+        raw,
+        raw_size,
+        zlib_data,
+        lzma_data,
+    } = blob;
     if let Some(raw) = raw {
         buf.reserve(raw.len());
         buf.copy_from_slice(&raw);
@@ -44,7 +46,6 @@ fn blob_raw_data(
         ZlibDecoder::new(cursor).read_to_end(&mut buf).unwrap();
     }
 }
-
 
 fn decode_nodes(
     _primitive_group: OSMPBF::PrimitiveGroup,
@@ -416,7 +417,9 @@ fn decode_block_to_objs(
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let stringtable: Vec<Option<String>> = block
-        .stringtable.s.iter()
+        .stringtable
+        .s
+        .iter()
         .map(|chars| std::str::from_utf8(&chars).ok().map(String::from))
         .collect();
 
@@ -519,7 +522,6 @@ impl<R: Read> OSMReader for PBFReader<R> {
             // FIXME is there a way we can ask self.reader if it's at EOF? Rather than waiting for
             // the failure and catching that?
 
-
             // read the next blob
             loop {
                 let size = self.reader.read_u32::<byteorder::BigEndian>().ok()?;
@@ -530,8 +532,9 @@ impl<R: Read> OSMReader for PBFReader<R> {
                     .unwrap();
 
                 let mut reader = BytesReader::from_bytes(&header_bytes_vec);
-                
-                let blob_header = fileformat::BlobHeader::from_reader(&mut reader, &header_bytes_vec).unwrap();
+
+                let blob_header =
+                    fileformat::BlobHeader::from_reader(&mut reader, &header_bytes_vec).unwrap();
 
                 blob_bytes.resize(blob_header.datasize as usize, 0);
                 self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
