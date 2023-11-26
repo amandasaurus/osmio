@@ -18,31 +18,31 @@ use flate2::read::ZlibDecoder;
 
 use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 
-use protobuf;
+
 mod OSMPBF;
 mod fileformat;
 mod node_id_pos;
 pub use self::node_id_pos::PBFNodePositionReader;
-use quick_protobuf::reader::deserialize_from_slice;
+
 
 type ObjectFilter = (bool, bool, bool);
 
-fn blob_raw_data(blob: &mut fileformat::Blob, mut buf: &mut Vec<u8>) {
+fn blob_raw_data(blob: &mut fileformat::Blob, buf: &mut Vec<u8>) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     buf.truncate(0);
     let fileformat::Blob {
         raw,
-        raw_size,
+        raw_size: _,
         zlib_data,
-        lzma_data,
+        lzma_data: _,
     } = blob;
     if let Some(raw) = raw {
         buf.reserve(raw.len());
-        buf.copy_from_slice(&raw);
+        buf.copy_from_slice(raw);
     } else if let Some(zlib_data) = zlib_data {
         let cursor = Cursor::new(zlib_data);
-        ZlibDecoder::new(cursor).read_to_end(&mut buf).unwrap();
+        ZlibDecoder::new(cursor).read_to_end(buf).unwrap();
     }
 }
 
@@ -351,6 +351,7 @@ fn decode_relations(
     num_objects_written
 }
 
+#[allow(clippy::too_many_arguments)]
 fn decode_primitive_group_to_objs(
     primitive_group: OSMPBF::PrimitiveGroup,
     granularity: i32,
@@ -411,7 +412,7 @@ fn decode_primitive_group_to_objs(
 }
 
 fn decode_block_to_objs(
-    mut block: OSMPBF::PrimitiveBlock,
+    block: OSMPBF::PrimitiveBlock,
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
@@ -419,7 +420,7 @@ fn decode_block_to_objs(
         .stringtable
         .s
         .iter()
-        .map(|chars| std::str::from_utf8(&chars).ok().map(String::from))
+        .map(|chars| std::str::from_utf8(chars).ok().map(String::from))
         .collect();
 
     let granularity = block.granularity;
