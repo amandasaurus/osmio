@@ -18,12 +18,10 @@ use flate2::read::ZlibDecoder;
 
 use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 
-
 mod OSMPBF;
 mod fileformat;
 mod node_id_pos;
 pub use self::node_id_pos::PBFNodePositionReader;
-
 
 type ObjectFilter = (bool, bool, bool);
 
