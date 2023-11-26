@@ -76,6 +76,10 @@ pub mod prelude {
     pub use crate::{Node, Relation, Way};
 }
 
+pub fn lat_lon_inner_to_degrees(inner: i32) -> f64 {
+    inner as f64 / COORD_SCALE_FACTOR
+}
+
 macro_rules! lat_lon_impl {
     ($lat_or_lon: ident) => {
         /// Latitude and Longitude are stored internally as a 32-bit signed integer, in units
@@ -115,7 +119,7 @@ macro_rules! lat_lon_impl {
             /// 64-bits. It is derived from an inner i32 representation, which mirrors the
             /// precision used by OpenStreetMap.org
             pub fn degrees(&self) -> f64 {
-                self.0 as f64 / COORD_SCALE_FACTOR
+                lat_lon_inner_to_degrees(self.0)
             }
         }
 
