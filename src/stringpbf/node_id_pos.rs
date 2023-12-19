@@ -23,14 +23,23 @@ pub struct PBFNodePositionReader<R: Read> {
     buffer: VecDeque<NodeIdPos>,
 }
 
-impl PBFNodePositionReader<BufReader<File>> {
-    fn new(reader: BufReader<File>) -> Self {
+impl<R: Read> PBFNodePositionReader<R> {
+    /// Create a new PBFNodePositionReader from this reader
+    fn new(reader: R) -> Self {
         Self {
             reader,
             buffer: VecDeque::new(),
         }
     }
 
+    /// Create a new PBFNodePositionReader from this reader
+    pub fn from_reader(reader: R) -> Self {
+        Self::new(reader)
+    }
+}
+
+impl PBFNodePositionReader<BufReader<File>> {
+    /// Create a new PBFNodePositionReader for this path
     pub fn from_filename(filename: impl AsRef<Path>) -> Result<Self> {
         let filename: &Path = filename.as_ref();
         Ok(Self::new(BufReader::new(File::open(filename)?)))

@@ -1,5 +1,9 @@
 # Changelog 
 
+# Unreleased
+
+* New constructors for PBFNodePositionReader
+
 # v0.12.0 (2023-11-27)
 
 * Expose inner function so users can use inner latlongs w/o temp allocations
