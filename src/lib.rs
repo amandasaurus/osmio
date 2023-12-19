@@ -432,8 +432,16 @@ pub trait Node: OSMObjBase {
 
 /// A Way
 pub trait Way: OSMObjBase {
+    /// List of node ids in this way
     fn nodes(&self) -> &[ObjId];
+
+    /// Alias for Way::nodes().
+    fn nids(&self) -> &[ObjId] {
+        self.nodes()
+    }
+    /// Number of nodes.
     fn num_nodes(&self) -> usize;
+    /// Return node id at this position
     fn node(&self, idx: usize) -> Option<ObjId>;
     fn set_nodes(&mut self, nodes: impl IntoIterator<Item = impl Into<ObjId>>);
 
@@ -450,7 +458,7 @@ pub trait Way: OSMObjBase {
     }
 
     /// When `is_area` is true, the Way should be interpreted as a 2-D shape rather than a 1-D
-    /// linestring.
+    /// linestring. Uses OSM convention to detect “areas”.
     fn is_area(&self) -> bool {
         // Generally any closed way represents an area the `area=yes` tag should also be present,
         // but sometimes it's `area=highway` or other things. In the interest of accepting all
