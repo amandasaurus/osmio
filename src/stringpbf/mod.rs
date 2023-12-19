@@ -554,8 +554,8 @@ impl<R: Read> OSMReader for PBFReader<R> {
                 // maybe the filter meant nothing was read
                 continue;
             }
-            let mut reader = BytesReader::from_bytes(&blob_raw_bytes);
-            let block = OSMPBF::PrimitiveBlock::from_reader(&mut reader, &blob_raw_bytes).unwrap();
+            let block: OSMPBF::PrimitiveBlock =
+                quick_protobuf::reader::deserialize_from_slice(&blob_raw_bytes).unwrap();
 
             // Turn a block into OSM objects
             decode_block_to_objs(block, &self.object_filter, &mut self.buffer);
