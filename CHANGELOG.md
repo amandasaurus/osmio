@@ -2,6 +2,7 @@
 
 # Unreleased
 
+* Revert change to backing protobuf library, it's too slow
 * New constructors for PBFNodePositionReader
 
 # v0.12.0 (2023-11-27)

@@ -6,7 +6,6 @@ use super::ObjId;
 use super::TimestampFormat;
 use byteorder;
 use byteorder::ReadBytesExt;
-use quick_protobuf::{BytesReader, MessageRead};
 use std::collections::VecDeque;
 use std::io::{Cursor, Read};
 use std::iter::Iterator;
@@ -18,34 +17,81 @@ use flate2::read::ZlibDecoder;
 
 use obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 
-mod OSMPBF;
+use protobuf;
 mod fileformat;
 mod node_id_pos;
+mod osmformat;
 pub use self::node_id_pos::PBFNodePositionReader;
 
 type ObjectFilter = (bool, bool, bool);
 
-fn blob_raw_data(blob: &mut fileformat::Blob, buf: &mut Vec<u8>) {
+struct FileReader<R: Read> {
+    reader: R,
+}
+
+fn blob_raw_data(
+    blob: &mut fileformat::Blob,
+    mut buf: &mut Vec<u8>,
+    _object_filter: &ObjectFilter,
+) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     buf.truncate(0);
-    let fileformat::Blob {
-        raw,
-        raw_size: _,
-        zlib_data,
-        lzma_data: _,
-    } = blob;
-    if let Some(raw) = raw {
+    if blob.has_raw() {
+        let raw = blob.get_raw();
         buf.reserve(raw.len());
-        buf.copy_from_slice(raw);
-    } else if let Some(zlib_data) = zlib_data {
+        buf.copy_from_slice(&raw);
+    } else if blob.has_zlib_data() {
+        let zlib_data = blob.get_zlib_data();
         let cursor = Cursor::new(zlib_data);
-        ZlibDecoder::new(cursor).read_to_end(buf).unwrap();
+        ZlibDecoder::new(cursor).read_to_end(&mut buf).unwrap();
+    }
+}
+
+impl<R: Read> FileReader<R> {
+    pub fn new(reader: R) -> Self {
+        FileReader { reader }
+    }
+
+    pub fn inner(&self) -> &R {
+        &self.reader
+    }
+
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
+
+    fn get_next_osmdata_blob(&mut self) -> Option<fileformat::Blob> {
+        loop {
+            // FIXME is there a way we can ask self.reader if it's at EOF? Rather than waiting for
+            // the failure and catching that?
+            let size = self.reader.read_u32::<byteorder::BigEndian>().ok()?;
+            let mut header_bytes_vec = vec![0; size as usize];
+
+            self.reader
+                .read_exact(header_bytes_vec.as_mut_slice())
+                .unwrap();
+
+            let blob_header: fileformat::BlobHeader =
+                protobuf::parse_from_bytes(&header_bytes_vec).unwrap();
+
+            let mut blob_bytes = vec![0; blob_header.get_datasize() as usize];
+            self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
+
+            if blob_header.get_field_type() != "OSMData" {
+                // keep going to the next blob
+                continue;
+            }
+
+            let blob: fileformat::Blob = protobuf::parse_from_bytes(&blob_bytes).unwrap();
+
+            return Some(blob);
+        }
     }
 }
 
 fn decode_nodes(
-    _primitive_group: OSMPBF::PrimitiveGroup,
+    _primitive_group: &osmformat::PrimitiveGroup,
     _granularity: i32,
     _lat_offset: i64,
     _lon_offset: i64,
@@ -57,7 +103,7 @@ fn decode_nodes(
 }
 
 fn decode_dense_nodes(
-    primitive_group: OSMPBF::PrimitiveGroup,
+    primitive_group: &osmformat::PrimitiveGroup,
     granularity: i32,
     lat_offset: i64,
     lon_offset: i64,
@@ -66,23 +112,23 @@ fn decode_dense_nodes(
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
-    let dense = primitive_group.dense.unwrap();
-    let ids = dense.id;
-    let lats = dense.lat;
-    let lons = dense.lon;
-    let denseinfo = dense.denseinfo.unwrap();
+    let dense = primitive_group.get_dense();
+    let ids = dense.get_id();
+    let lats = dense.get_lat();
+    let lons = dense.get_lon();
+    let denseinfo = dense.get_denseinfo();
 
-    let uids = denseinfo.uid;
-    let changesets = denseinfo.changeset;
-    let user_sids = denseinfo.user_sid;
-    let timestamps = denseinfo.timestamp;
+    let uids = denseinfo.get_uid();
+    let changesets = denseinfo.get_changeset();
+    let user_sids = denseinfo.get_user_sid();
+    let timestamps = denseinfo.get_timestamp();
 
     let num_nodes = ids.len();
     results.reserve(num_nodes);
     // TODO assert that the id, denseinfo, lat, lon and optionally keys_vals has the same
     // length
 
-    let keys_vals = dense.keys_vals;
+    let keys_vals = dense.get_keys_vals();
     let has_tags = !keys_vals.is_empty();
 
     let mut keys_vals_index = 0;
@@ -171,11 +217,11 @@ fn decode_dense_nodes(
             _id: id as ObjId,
             _tags: tags,
             _lat_lon: Some((Lat(internal_lat), Lon(internal_lon))),
-            _deleted: !denseinfo.visible.get(index).unwrap_or(&true),
+            _deleted: !denseinfo.get_visible().get(index).unwrap_or(&true),
             _changeset_id: Some(changeset_id as u32),
             _uid: Some(uid_id as u32),
             _user: Some(stringtable[user_sid as usize].clone().unwrap()),
-            _version: Some(denseinfo.version[index] as u32),
+            _version: Some(denseinfo.get_version()[index] as u32),
             _timestamp: Some(timestamp),
         }));
         num_objects_written += 1
@@ -185,7 +231,7 @@ fn decode_dense_nodes(
 }
 
 fn decode_ways(
-    primitive_group: OSMPBF::PrimitiveGroup,
+    primitive_group: &osmformat::PrimitiveGroup,
     _granularity: i32,
     _lat_offset: i64,
     _lon_offset: i64,
@@ -194,17 +240,17 @@ fn decode_ways(
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
-    let ways = primitive_group.ways;
+    let ways = primitive_group.get_ways();
     results.reserve(ways.len());
     for way in ways {
-        let id = way.id as ObjId;
+        let id = way.get_id() as ObjId;
         // TODO check for +itive keys/vals
         let keys = way
-            .keys
+            .get_keys()
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = way
-            .vals
+            .get_vals()
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
@@ -215,7 +261,7 @@ fn decode_ways(
             })
             .collect();
 
-        let refs = way.refs;
+        let refs = way.get_refs();
         let mut nodes = Vec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
@@ -236,23 +282,22 @@ fn decode_ways(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let timestamp = TimestampFormat::EpochNunber(way.info.as_ref().unwrap().timestamp.unwrap());
-        let info = way.info.as_ref().unwrap();
+        let timestamp = TimestampFormat::EpochNunber(way.get_info().get_timestamp());
 
         results.push_back(StringOSMObj::Way(StringWay {
             _id: id,
             _tags: tags,
             _nodes: nodes,
-            _deleted: !info.visible.unwrap_or(true),
-            _changeset_id: Some(info.changeset.unwrap() as u32),
-            _uid: Some(info.uid.unwrap() as u32),
+            _deleted: !way.get_info().get_visible(),
+            _changeset_id: Some(way.get_info().get_changeset() as u32),
+            _uid: Some(way.get_info().get_uid() as u32),
             _user: Some(
-                stringtable[info.user_sid.unwrap() as usize]
+                stringtable[way.get_info().get_user_sid() as usize]
                     .clone()
                     .unwrap()
                     .clone(),
             ),
-            _version: Some(info.version as u32),
+            _version: Some(way.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
         }));
         num_objects_written += 1;
@@ -261,7 +306,7 @@ fn decode_ways(
 }
 
 fn decode_relations(
-    primitive_group: OSMPBF::PrimitiveGroup,
+    primitive_group: &osmformat::PrimitiveGroup,
     _granularity: i32,
     _lat_offset: i64,
     _lon_offset: i64,
@@ -271,15 +316,15 @@ fn decode_relations(
 ) -> usize {
     let _last_timestamp = 0;
     let mut num_objects_written = 0;
-    for relation in primitive_group.relations.into_iter() {
-        let id = relation.id as ObjId;
+    for relation in primitive_group.get_relations() {
+        let id = relation.get_id() as ObjId;
         // TODO check for +itive keys/vals
         let keys = relation
-            .keys
+            .get_keys()
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = relation
-            .vals
+            .get_vals()
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
@@ -291,11 +336,11 @@ fn decode_relations(
             .collect();
 
         let roles = relation
-            .roles_sid
+            .get_roles_sid()
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
 
-        let refs = relation.memids;
+        let refs = relation.get_memids();
         let mut member_ids = Vec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
@@ -309,10 +354,10 @@ fn decode_relations(
         let _num_members = member_ids.len();
         let member_ids = member_ids.iter();
 
-        let member_types = relation.types.iter().map(|t| match *t {
-            OSMPBF::mod_Relation::MemberType::NODE => OSMObjectType::Node,
-            OSMPBF::mod_Relation::MemberType::WAY => OSMObjectType::Way,
-            OSMPBF::mod_Relation::MemberType::RELATION => OSMObjectType::Relation,
+        let member_types = relation.get_types().iter().map(|t| match *t {
+            osmformat::Relation_MemberType::NODE => OSMObjectType::Node,
+            osmformat::Relation_MemberType::WAY => OSMObjectType::Way,
+            osmformat::Relation_MemberType::RELATION => OSMObjectType::Relation,
         });
 
         let members: Vec<_> = member_types
@@ -326,22 +371,21 @@ fn decode_relations(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let info = relation.info.as_ref().unwrap();
-        let timestamp = TimestampFormat::EpochNunber(info.timestamp.unwrap());
+        let timestamp = TimestampFormat::EpochNunber(relation.get_info().get_timestamp());
 
         sink.push_back(StringOSMObj::Relation(StringRelation {
             _id: id,
             _tags: tags,
             _members: members,
-            _deleted: !info.visible.unwrap(),
-            _changeset_id: Some(info.changeset.unwrap() as u32),
-            _uid: Some(info.uid.unwrap() as u32),
+            _deleted: !relation.get_info().get_visible(),
+            _changeset_id: Some(relation.get_info().get_changeset() as u32),
+            _uid: Some(relation.get_info().get_uid() as u32),
             _user: Some(
-                stringtable[info.user_sid.unwrap() as usize]
+                stringtable[relation.get_info().get_user_sid() as usize]
                     .clone()
                     .unwrap(),
             ),
-            _version: Some(info.version as u32),
+            _version: Some(relation.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
         }));
         num_objects_written += 1;
@@ -349,9 +393,8 @@ fn decode_relations(
     num_objects_written
 }
 
-#[allow(clippy::too_many_arguments)]
 fn decode_primitive_group_to_objs(
-    primitive_group: OSMPBF::PrimitiveGroup,
+    primitive_group: &osmformat::PrimitiveGroup,
     granularity: i32,
     lat_offset: i64,
     lon_offset: i64,
@@ -362,7 +405,7 @@ fn decode_primitive_group_to_objs(
 ) -> usize {
     let date_granularity = date_granularity / 1000;
     let mut num_objects_written = 0;
-    if !primitive_group.nodes.is_empty() && object_filter.0 {
+    if !primitive_group.get_nodes().is_empty() && object_filter.0 {
         num_objects_written += decode_nodes(
             primitive_group,
             granularity,
@@ -372,7 +415,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             sink,
         );
-    } else if primitive_group.dense.is_some() && object_filter.0 {
+    } else if primitive_group.has_dense() && object_filter.0 {
         num_objects_written += decode_dense_nodes(
             primitive_group,
             granularity,
@@ -382,7 +425,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             sink,
         );
-    } else if !primitive_group.ways.is_empty() && object_filter.1 {
+    } else if !primitive_group.get_ways().is_empty() && object_filter.1 {
         num_objects_written += decode_ways(
             primitive_group,
             granularity,
@@ -392,7 +435,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             sink,
         );
-    } else if !primitive_group.relations.is_empty() && object_filter.2 {
+    } else if !primitive_group.get_relations().is_empty() && object_filter.2 {
         num_objects_written += decode_relations(
             primitive_group,
             granularity,
@@ -410,25 +453,25 @@ fn decode_primitive_group_to_objs(
 }
 
 fn decode_block_to_objs(
-    block: OSMPBF::PrimitiveBlock,
+    mut block: osmformat::PrimitiveBlock,
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let stringtable: Vec<Option<String>> = block
-        .stringtable
-        .s
-        .iter()
-        .map(|chars| std::str::from_utf8(chars).ok().map(String::from))
+        .take_stringtable()
+        .take_s()
+        .into_iter()
+        .map(|chars| std::str::from_utf8(&chars).ok().map(String::from))
         .collect();
 
-    let granularity = block.granularity;
-    let lat_offset = block.lat_offset;
-    let lon_offset = block.lon_offset;
-    let date_granularity = block.date_granularity;
+    let granularity = block.get_granularity();
+    let lat_offset = block.get_lat_offset();
+    let lon_offset = block.get_lon_offset();
+    let date_granularity = block.get_date_granularity();
 
     let mut results = 0;
 
-    for primitive_group in block.primitivegroup.into_iter() {
+    for primitive_group in block.get_primitivegroup() {
         results += decode_primitive_group_to_objs(
             primitive_group,
             granularity,
@@ -444,9 +487,17 @@ fn decode_block_to_objs(
     results
 }
 
+impl<R: Read> Iterator for FileReader<R> {
+    type Item = fileformat::Blob;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.get_next_osmdata_blob()
+    }
+}
+
 /// A thing that read PBF files
 pub struct PBFReader<R: Read> {
-    reader: R,
+    filereader: FileReader<R>,
     buffer: VecDeque<StringOSMObj>,
     _sorted_assumption: bool,
     object_filter: ObjectFilter,
@@ -486,7 +537,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
 
     fn new(reader: R) -> PBFReader<R> {
         PBFReader {
-            reader,
+            filereader: FileReader::new(reader),
             buffer: VecDeque::new(),
             _sorted_assumption: false,
             object_filter: (true, true, true),
@@ -501,61 +552,29 @@ impl<R: Read> OSMReader for PBFReader<R> {
     }
 
     fn inner(&self) -> &R {
-        &self.reader
+        self.filereader.inner()
     }
 
     fn into_inner(self) -> R {
-        self.reader
+        self.filereader.into_inner()
     }
 
     fn next(&mut self) -> Option<StringOSMObj> {
-        let mut blob_bytes = Vec::new();
-        let mut blob_raw_bytes = Vec::new();
-        let mut blob;
+        let mut blob_data = Vec::new();
         while self.buffer.is_empty() {
             // get the next file block and fill up our buffer
             // FIXME make this parallel
 
             // get the next block
-            // FIXME is there a way we can ask self.reader if it's at EOF? Rather than waiting for
-            // the failure and catching that?
+            let mut blob = self.filereader.next()?;
 
-            // read the next blob
-            loop {
-                let size = self.reader.read_u32::<byteorder::BigEndian>().ok()?;
-                let mut header_bytes_vec = vec![0; size as usize];
-
-                self.reader
-                    .read_exact(header_bytes_vec.as_mut_slice())
-                    .unwrap();
-
-                let mut reader = BytesReader::from_bytes(&header_bytes_vec);
-
-                let blob_header =
-                    fileformat::BlobHeader::from_reader(&mut reader, &header_bytes_vec).unwrap();
-
-                blob_bytes.resize(blob_header.datasize as usize, 0);
-                self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
-
-                if blob_header.type_pb != "OSMData" {
-                    // keep going to the next blob
-                    continue;
-                }
-
-                let mut reader = BytesReader::from_bytes(&blob_bytes);
-
-                blob = fileformat::Blob::from_reader(&mut reader, &blob_bytes).unwrap();
-                break;
-            }
-
-            blob_raw_bytes.truncate(0);
-            blob_raw_data(&mut blob, &mut blob_raw_bytes);
-            if blob_raw_bytes.is_empty() {
+            blob_data.truncate(0);
+            blob_raw_data(&mut blob, &mut blob_data, &self.object_filter);
+            if blob_data.is_empty() {
                 // maybe the filter meant nothing was read
                 continue;
             }
-            let block: OSMPBF::PrimitiveBlock =
-                quick_protobuf::reader::deserialize_from_slice(&blob_raw_bytes).unwrap();
+            let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
             decode_block_to_objs(block, &self.object_filter, &mut self.buffer);
