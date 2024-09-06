@@ -1,6 +1,6 @@
 # Changelog 
 
-# Unreleased
+# v0.13.0 (2024-09-06)
 
 * Revert change to backing protobuf library, it's too slow
 * New constructors for PBFNodePositionReader
