@@ -7,6 +7,8 @@ use super::{Node, OSMObj, OSMObjectType, Relation, Way};
 use super::{OSMReader, OSMWriteError, OSMWriter};
 use crate::obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
 use bzip2::read::MultiBzDecoder;
+use smallvec::SmallVec;
+use smol_str::SmolStr;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
@@ -168,8 +170,8 @@ pub(crate) fn get_xml_attribute(attrs: &mut Vec<OwnedAttribute>, key: &str) -> O
         })
 }
 
-fn get_tags(els: &mut [XmlEvent]) -> Option<Vec<(String, String)>> {
-    let mut result: Option<Vec<(String, String)>> = None;
+fn get_tags(els: &mut [XmlEvent]) -> Vec<(SmolStr, SmolStr)> {
+    let mut result = Vec::new();
     for el in els.iter_mut() {
         if let &mut XmlEvent::StartElement {
             ref name,
@@ -181,14 +183,7 @@ fn get_tags(els: &mut [XmlEvent]) -> Option<Vec<(String, String)>> {
                 let ko = get_xml_attribute(attributes, "k");
                 let vo = get_xml_attribute(attributes, "v");
                 if let (Some(k), Some(v)) = (ko, vo) {
-                    match result {
-                        None => {
-                            result = Some(vec![(k, v)]);
-                        }
-                        Some(ref mut res) => {
-                            res.push((k, v));
-                        }
-                    }
+                    result.push((SmolStr::new(k), SmolStr::new(v)));
                 }
             }
         }
@@ -220,7 +215,7 @@ fn get_nodes(els: &mut [XmlEvent]) -> Vec<ObjId> {
     result
 }
 
-fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, String)> {
+fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, SmolStr)> {
     let mut result = Vec::new();
 
     for el in els.iter_mut() {
@@ -235,7 +230,7 @@ fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, String)> {
                     get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
                 let member_type_o: Option<OSMObjectType> =
                     get_xml_attribute(attributes, "type").and_then(|t| t.parse().ok());
-                let role = get_xml_attribute(attributes, "role").unwrap_or_default();
+                let role = SmolStr::new(get_xml_attribute(attributes, "role").unwrap_or_default());
                 if let (Some(ref_id), Some(member_type)) = (ref_id_o, member_type_o) {
                     result.push((member_type, ref_id, role));
                 }
@@ -291,9 +286,9 @@ fn node_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
         _changeset_id: changeset_id,
         _timestamp: timestamp,
         _uid: uid,
-        _user: user,
+        _user: user.map(SmolStr::new),
         _lat_lon: lat_lon,
-        _tags: tags,
+        _tags: SmallVec::from_vec(tags),
     }))
 }
 
@@ -323,9 +318,9 @@ fn way_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj> {
         _changeset_id: changeset_id,
         _timestamp: timestamp,
         _uid: uid,
-        _user: user,
-        _tags: tags.unwrap_or_default(),
-        _nodes: nodes,
+        _user: user.map(SmolStr::new),
+        _tags: SmallVec::from_vec(tags),
+        _nodes: SmallVec::from_vec(nodes),
     }))
 }
 
@@ -355,8 +350,8 @@ fn relation_xml_elements_to_osm_obj(els: &mut [XmlEvent]) -> Option<StringOSMObj
         _changeset_id: changeset_id,
         _timestamp: timestamp,
         _uid: uid,
-        _user: user,
-        _tags: tags.unwrap_or_default(),
+        _user: user.map(SmolStr::new),
+        _tags: SmallVec::from_vec(tags),
         _members: members,
     }))
 }

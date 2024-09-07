@@ -6,6 +6,8 @@ use super::ObjId;
 use super::TimestampFormat;
 use byteorder;
 use byteorder::ReadBytesExt;
+use smallvec::SmallVec;
+use smol_str::SmolStr;
 use std::collections::VecDeque;
 use std::io::{Cursor, Read};
 use std::iter::Iterator;
@@ -92,7 +94,7 @@ fn decode_nodes(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    _stringtable: &[Option<String>],
+    _stringtable: &[SmolStr],
     _sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     unimplemented!("Dense node");
@@ -104,7 +106,7 @@ fn decode_dense_nodes(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &[Option<String>],
+    stringtable: &[SmolStr],
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
@@ -125,7 +127,6 @@ fn decode_dense_nodes(
     // length
 
     let keys_vals = dense.get_keys_vals();
-    let has_tags = !keys_vals.is_empty();
 
     let mut keys_vals_index = 0;
 
@@ -162,40 +163,24 @@ fn decode_dense_nodes(
         internal_lat += internal_lat_offset as i32;
         internal_lon += internal_lon_offset as i32;
 
-        let tags = if !has_tags {
-            None
-        } else {
-            let mut tags = Vec::new();
-            loop {
-                //assert!(keys_vals_index <= keys_vals.len());
-                let next = keys_vals[keys_vals_index];
+        let mut tags: SmallVec<[(SmolStr, SmolStr); 1]> = SmallVec::new();
+        loop {
+            //assert!(keys_vals_index <= keys_vals.len());
+            let next = keys_vals[keys_vals_index];
+            keys_vals_index += 1;
+            if next == 0 {
+                break;
+            } else {
+                let key = next;
+                let val = keys_vals[keys_vals_index];
                 keys_vals_index += 1;
-                if next == 0 {
-                    break;
-                } else {
-                    let key = next;
-                    let val = keys_vals[keys_vals_index];
-                    keys_vals_index += 1;
-                    tags.push((key, val));
-                }
-                // FIXME infinite loop detection maybe?
+                tags.push((
+                    stringtable[key as usize].clone(),
+                    stringtable[val as usize].clone(),
+                ));
             }
-
-            Some(
-                tags.iter()
-                    .map(|&(kidx, vidx)| {
-                        (
-                            stringtable[kidx as usize].clone(),
-                            stringtable[vidx as usize].clone(),
-                        )
-                    })
-                    .filter_map(|(k, v)| match (k, v) {
-                        (Some(k), Some(v)) => Some((k, v)),
-                        _ => None,
-                    })
-                    .collect(),
-            )
-        };
+            // FIXME infinite loop detection maybe?
+        }
 
         let changeset_id = changesets[index] + last_changset;
         last_changset = changeset_id;
@@ -216,7 +201,7 @@ fn decode_dense_nodes(
             _deleted: !denseinfo.get_visible().get(index).unwrap_or(&true),
             _changeset_id: Some(changeset_id as u32),
             _uid: Some(uid_id as u32),
-            _user: Some(stringtable[user_sid as usize].clone().unwrap()),
+            _user: Some(stringtable[user_sid as usize].clone()),
             _version: Some(denseinfo.get_version()[index] as u32),
             _timestamp: Some(timestamp),
         }));
@@ -232,7 +217,7 @@ fn decode_ways(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &[Option<String>],
+    stringtable: &[SmolStr],
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
@@ -240,6 +225,7 @@ fn decode_ways(
     results.reserve(ways.len());
     for way in ways {
         let id = way.get_id() as ObjId;
+        let mut tags = SmallVec::with_capacity(way.get_keys().len());
         // TODO check for +itive keys/vals
         let keys = way
             .get_keys()
@@ -249,16 +235,11 @@ fn decode_ways(
             .get_vals()
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
-        let tags = keys.zip(vals);
-        let tags: Vec<_> = tags
-            .filter_map(|(k, v)| match (k, v) {
-                (Some(k), Some(v)) => Some((k, v)),
-                _ => None,
-            })
-            .collect();
+        assert_eq!(keys.len(), vals.len());
+        tags.extend(keys.zip(vals));
 
         let refs = way.get_refs();
-        let mut nodes = Vec::with_capacity(refs.len());
+        let mut nodes = SmallVec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
             let mut last_id = refs[0];
@@ -290,8 +271,6 @@ fn decode_ways(
             _user: Some(
                 stringtable[way.get_info().get_user_sid() as usize]
                     .clone()
-                    .unwrap()
-                    .clone(),
             ),
             _version: Some(way.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
@@ -307,11 +286,12 @@ fn decode_relations(
     _lat_offset: i64,
     _lon_offset: i64,
     _date_granularity: i32,
-    stringtable: &[Option<String>],
+    stringtable: &[SmolStr],
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let _last_timestamp = 0;
     let mut num_objects_written = 0;
+    sink.reserve(primitive_group.get_relations().len());
     for relation in primitive_group.get_relations() {
         let id = relation.get_id() as ObjId;
         // TODO check for +itive keys/vals
@@ -323,13 +303,8 @@ fn decode_relations(
             .get_vals()
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
-        let tags = keys.zip(vals);
-        let tags: Vec<_> = tags
-            .filter_map(|(k, v)| match (k, v) {
-                (Some(k), Some(v)) => Some((k, v)),
-                _ => None,
-            })
-            .collect();
+        assert_eq!(keys.len(), vals.len());
+        let tags: SmallVec<_> = keys.zip(vals).collect();
 
         let roles = relation
             .get_roles_sid()
@@ -359,7 +334,7 @@ fn decode_relations(
         let members: Vec<_> = member_types
             .zip(member_ids)
             .zip(roles)
-            .filter_map(|((t, &id), r_opt)| r_opt.map(|r| (t, id, r)))
+            .filter_map(|((t, &id), r)| Some((t, id, r.clone())))
             .collect();
 
         // TODO could there be *no* info? What should be done there
@@ -376,11 +351,7 @@ fn decode_relations(
             _deleted: !relation.get_info().get_visible(),
             _changeset_id: Some(relation.get_info().get_changeset() as u32),
             _uid: Some(relation.get_info().get_uid() as u32),
-            _user: Some(
-                stringtable[relation.get_info().get_user_sid() as usize]
-                    .clone()
-                    .unwrap(),
-            ),
+            _user: Some(stringtable[relation.get_info().get_user_sid() as usize].clone()),
             _version: Some(relation.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
         }));
@@ -395,7 +366,7 @@ fn decode_primitive_group_to_objs(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &[Option<String>],
+    stringtable: &[SmolStr],
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
@@ -453,12 +424,13 @@ fn decode_block_to_objs(
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
-    let stringtable: Vec<Option<String>> = block
+    let mut stringtable: Vec<SmolStr> = Vec::with_capacity(block.get_stringtable().get_s().iter().count());
+    stringtable.extend(block
         .take_stringtable()
         .take_s()
         .into_iter()
-        .map(|chars| std::str::from_utf8(&chars).ok().map(String::from))
-        .collect();
+        .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
+    );
 
     let granularity = block.get_granularity();
     let lat_offset = block.get_lat_offset();

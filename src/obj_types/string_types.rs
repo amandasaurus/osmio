@@ -1,6 +1,7 @@
 use super::*;
 use crate::{Lat, Lon, OSMObj, OSMObjectType, ObjId, TimestampFormat};
-use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
+use smol_str::SmolStr;
 
 macro_rules! func_call_inner_get {
     ($slf:ident, $name:ident) => {
@@ -22,7 +23,7 @@ macro_rules! func_call_inner_set {
     };
 }
 
-#[derive(PartialEq, Debug, Builder, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Builder, Clone)]
 #[builder(setter(strip_option))]
 pub struct StringNode {
     pub(crate) _id: ObjId,
@@ -39,16 +40,16 @@ pub struct StringNode {
     #[builder(default = "None")]
     pub(crate) _uid: Option<u32>,
     #[builder(default = "None")]
-    pub(crate) _user: Option<String>,
+    pub(crate) _user: Option<SmolStr>,
 
-    #[builder(default = "None")]
-    pub(crate) _tags: Option<Vec<(String, String)>>,
+    #[builder(default = "smallvec::smallvec![]")]
+    pub(crate) _tags: SmallVec<[(SmolStr, SmolStr); 1]>,
 
     #[builder(default = "None")]
     pub(crate) _lat_lon: Option<(Lat, Lon)>,
 }
 
-#[derive(PartialEq, Debug, Builder, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Builder, Clone)]
 #[builder(setter(strip_option))]
 pub struct StringWay {
     pub(crate) _id: ObjId,
@@ -63,16 +64,16 @@ pub struct StringWay {
     #[builder(default = "None")]
     pub(crate) _uid: Option<u32>,
     #[builder(default = "None")]
-    pub(crate) _user: Option<String>,
+    pub(crate) _user: Option<SmolStr>,
 
-    #[builder(default = "Vec::new()")]
-    pub(crate) _tags: Vec<(String, String)>,
+    #[builder(default = "smallvec::smallvec![]")]
+    pub(crate) _tags: SmallVec<[(SmolStr, SmolStr); 1]>,
 
-    #[builder(default = "Vec::new()")]
-    pub(crate) _nodes: Vec<ObjId>,
+    #[builder(default = "smallvec::smallvec![]")]
+    pub(crate) _nodes: SmallVec<[ObjId; 6]>,
 }
 
-#[derive(PartialEq, Debug, Builder, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Builder, Clone)]
 #[builder(setter(strip_option))]
 pub struct StringRelation {
     pub(crate) _id: ObjId,
@@ -87,16 +88,16 @@ pub struct StringRelation {
     #[builder(default = "None")]
     pub(crate) _uid: Option<u32>,
     #[builder(default = "None")]
-    pub(crate) _user: Option<String>,
+    pub(crate) _user: Option<SmolStr>,
+
+    #[builder(default = "smallvec::smallvec![]")]
+    pub(crate) _tags: SmallVec<[(SmolStr, SmolStr); 1]>,
 
     #[builder(default = "Vec::new()")]
-    pub(crate) _tags: Vec<(String, String)>,
-
-    #[builder(default = "Vec::new()")]
-    pub(crate) _members: Vec<(OSMObjectType, ObjId, String)>,
+    pub(crate) _members: Vec<(OSMObjectType, ObjId, SmolStr)>,
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum StringOSMObj {
     Node(StringNode),
     Way(StringWay),
@@ -321,57 +322,46 @@ impl OSMObjBase for StringNode {
         self._uid = val.into();
     }
     fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) {
-        self._user = val.into().map(|s| s.to_string());
+        self._user = val.into().map(SmolStr::new);
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
-        match self._tags {
-            None => Box::new(std::iter::empty()),
-            Some(ref t) => Box::new(t.iter().map(|(k, v)| (k.as_ref(), v.as_ref()))),
-        }
+        Box::new(self._tags.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
     }
 
     fn tag(&self, key: impl AsRef<str>) -> Option<&str> {
         let key = key.as_ref();
-        self._tags.as_ref().and_then(|tags| {
-            tags.iter()
-                .filter_map(|(k, v)| if k == key { Some(v.as_ref()) } else { None })
-                .next()
-        })
+        self._tags
+            .iter()
+            .filter_map(|(k, v)| if k == key { Some(v.as_ref()) } else { None })
+            .next()
     }
 
     fn set_tag(&mut self, key: impl AsRef<str>, value: impl Into<String>) {
         let key: &str = key.as_ref();
         let value: String = value.into();
-        match self._tags {
-            None => {
-                self._tags = Some(vec![(key.to_string(), value)]);
-            }
-            Some(ref mut tags) => {
-                let idx = tags
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
-                    .next();
-                match idx {
-                    None => tags.push((key.to_string(), value)),
-                    Some(i) => tags[i] = (key.to_string(), value),
-                }
-            }
+        let idx = self
+            ._tags
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
+            .next();
+        match idx {
+            None => self._tags.push((SmolStr::new(key), SmolStr::new(value))),
+            Some(i) => self._tags[i] = (SmolStr::new(key), SmolStr::new(value)),
         }
     }
 
     fn unset_tag(&mut self, key: impl AsRef<str>) {
-        if let Some(ref mut tags) = self._tags {
-            let key = key.as_ref();
-            let idx = tags
-                .iter()
-                .enumerate()
-                .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
-                .next();
-            if let Some(i) = idx {
-                tags.remove(i);
-            }
+        let key = key.as_ref();
+        let idx = self
+            ._tags
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
+            .next();
+        if let Some(i) = idx {
+            self._tags.remove(i);
         }
     }
 
@@ -432,7 +422,7 @@ impl OSMObjBase for StringWay {
         self._uid = val.into();
     }
     fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) {
-        self._user = val.into().map(|s| s.to_string());
+        self._user = val.into().map(SmolStr::new);
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
@@ -457,8 +447,8 @@ impl OSMObjBase for StringWay {
             .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
             .next();
         match idx {
-            None => self._tags.push((key.to_string(), value)),
-            Some(i) => self._tags[i] = (key.into(), value),
+            None => self._tags.push((SmolStr::new(key), SmolStr::new(value))),
+            Some(i) => self._tags[i] = (SmolStr::new(key), SmolStr::new(value)),
         }
     }
 
@@ -538,7 +528,7 @@ impl OSMObjBase for StringRelation {
         self._uid = val.into();
     }
     fn set_user<'a>(&mut self, val: impl Into<Option<&'a str>>) {
-        self._user = val.into().map(|s| s.to_string());
+        self._user = val.into().map(SmolStr::new);
     }
 
     fn tags<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item = (&'a str, &'a str)> + 'a> {
@@ -563,8 +553,8 @@ impl OSMObjBase for StringRelation {
             .filter_map(|(i, (k, _))| if k == key { Some(i) } else { None })
             .next();
         match idx {
-            None => self._tags.push((key.to_string(), value)),
-            Some(i) => self._tags[i] = (key.into(), value),
+            None => self._tags.push((SmolStr::new(key), SmolStr::new(value))),
+            Some(i) => self._tags[i] = (key.into(), value.into()),
         }
     }
 
@@ -599,6 +589,6 @@ impl Relation for StringRelation {
     ) {
         self._members.truncate(0);
         self._members
-            .extend(members.into_iter().map(|(t, i, r)| (t, i, r.into())))
+            .extend(members.into_iter().map(|(t, i, r)| (t, i, SmolStr::new(r.into()))))
     }
 }

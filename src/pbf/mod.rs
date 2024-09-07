@@ -1,2 +1,2 @@
-//! Read PBF file (currently alias for arcpbf::)
-pub use crate::arcpbf::*;
+//! Read PBF file (currently alias for stringpbf::)
+pub use crate::stringpbf::*;

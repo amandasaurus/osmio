@@ -23,6 +23,8 @@ extern crate anyhow;
 extern crate bzip2;
 extern crate serde;
 extern crate serde_json;
+extern crate smallvec;
+extern crate smol_str;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
