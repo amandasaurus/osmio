@@ -1,7 +1,7 @@
 extern crate osmio;
 extern crate separator;
 
-use osmio::pbf::PBFReader;
+use osmio::stringpbf::PBFReader;
 use osmio::OSMReader;
 use std::env::args;
 use std::fs::File;
