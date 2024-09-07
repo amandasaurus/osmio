@@ -533,8 +533,8 @@ impl<W: Write> Drop for XMLWriter<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::obj_types::StringNodeBuilder;
     use crate::{Lat, Lon};
-    use obj_types::StringNodeBuilder;
 
     macro_rules! assert_escape {
         ( $name:ident, $input:expr, $output:expr ) => {
@@ -585,7 +585,7 @@ mod tests {
 			._changeset_id(1)
 			._timestamp(700.into())
 			._uid(1)
-			._user("&foo".to_string())
+			._user("&foo".into())
 			._lat_lon((Lat(0), Lon(0)))
 			.build()
 			.unwrap(),
