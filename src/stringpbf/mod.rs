@@ -31,7 +31,7 @@ struct FileReader<R: Read> {
 
 fn blob_raw_data(
     blob: &mut fileformat::Blob,
-    mut buf: &mut Vec<u8>,
+    buf: &mut Vec<u8>,
     _object_filter: &ObjectFilter,
 ) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
@@ -40,11 +40,11 @@ fn blob_raw_data(
     if blob.has_raw() {
         let raw = blob.get_raw();
         buf.reserve(raw.len());
-        buf.copy_from_slice(&raw);
+        buf.copy_from_slice(raw);
     } else if blob.has_zlib_data() {
         let zlib_data = blob.get_zlib_data();
         let cursor = Cursor::new(zlib_data);
-        ZlibDecoder::new(cursor).read_to_end(&mut buf).unwrap();
+        ZlibDecoder::new(cursor).read_to_end(buf).unwrap();
     }
 }
 
