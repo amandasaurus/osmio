@@ -7,7 +7,6 @@
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-#![allow(box_pointers)]
 #![allow(dead_code)]
 #![allow(missing_docs)]
 #![allow(non_camel_case_types)]

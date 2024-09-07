@@ -3,7 +3,7 @@ mod arc_types;
 mod rc_types;
 mod string_types;
 
-use {Node, OSMObjBase, Relation, Way};
+use crate::{Node, OSMObjBase, Relation, Way};
 
 pub use self::arc_types::*;
 pub use self::rc_types::*;

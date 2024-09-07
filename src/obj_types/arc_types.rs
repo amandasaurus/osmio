@@ -1,5 +1,6 @@
+use super::*;
+use crate::{Lat, Lon, OSMObj, OSMObjectType, ObjId, TimestampFormat};
 use std::sync::Arc;
-use *;
 
 macro_rules! func_call_inner_get {
     ($slf:ident, $name:ident) => {

@@ -3,11 +3,11 @@
 use super::version;
 use super::{Node, OSMObj, OSMObjectType, Relation, Way};
 use super::{OSMReader, OSMWriteError, OSMWriter};
-use obj_types::StringOSMObj;
+use crate::obj_types::StringOSMObj;
 use std::io::{BufReader, Read, Write};
 use std::iter::Iterator;
 
-use xml::{write_xml_escaped, xml_elements_to_osm_obj};
+use crate::xml::{write_xml_escaped, xml_elements_to_osm_obj};
 
 use xml_rs::reader::{EventReader, Events, XmlEvent};
 
