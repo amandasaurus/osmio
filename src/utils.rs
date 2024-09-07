@@ -3,7 +3,8 @@ use chrono::{offset::Utc, DateTime};
 
 pub fn epoch_to_iso(epoch: i32) -> String {
     // Chrono is a little silly and can't easily convert from epoch to utc timezone
-    let d: DateTime<Utc> = DateTime::from_timestamp(epoch as i64, 0).expect("epoch timestamp too high");
+    let d: DateTime<Utc> =
+        DateTime::from_timestamp(epoch as i64, 0).expect("epoch timestamp too high");
     d.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
