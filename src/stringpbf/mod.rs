@@ -192,7 +192,7 @@ fn decode_dense_nodes(
         let timestamp = timestamp * date_granularity;
         last_timestamp = timestamp;
         let timestamp = TimestampFormat::EpochNunber(timestamp as i64);
-        assert!(uid_id < std::i32::MAX);
+        assert!(uid_id < i32::MAX);
 
         results.push_back(StringOSMObj::Node(StringNode {
             _id: id as ObjId,
@@ -331,7 +331,7 @@ fn decode_relations(
         let members: Vec<_> = member_types
             .zip(member_ids)
             .zip(roles)
-            .filter_map(|((t, &id), r)| Some((t, id, r.clone())))
+            .map(|((t, &id), r)| (t, id, r.clone()))
             .collect();
 
         // TODO could there be *no* info? What should be done there
@@ -357,6 +357,7 @@ fn decode_relations(
     num_objects_written
 }
 
+#[allow(clippy::too_many_arguments)]
 fn decode_primitive_group_to_objs(
     primitive_group: &osmformat::PrimitiveGroup,
     granularity: i32,

@@ -204,7 +204,7 @@ fn decode_dense_nodes(
         let timestamp = timestamp * date_granularity;
         last_timestamp = timestamp;
         let timestamp = TimestampFormat::EpochNunber(timestamp as i64);
-        assert!(uid_id < std::i32::MAX);
+        assert!(uid_id < i32::MAX);
 
         results.push(ArcOSMObj::Node(ArcNode {
             _id: id as ObjId,
