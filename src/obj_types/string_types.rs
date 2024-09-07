@@ -588,7 +588,10 @@ impl Relation for StringRelation {
         members: impl IntoIterator<Item = (OSMObjectType, ObjId, impl Into<String>)>,
     ) {
         self._members.truncate(0);
-        self._members
-            .extend(members.into_iter().map(|(t, i, r)| (t, i, SmolStr::new(r.into()))))
+        self._members.extend(
+            members
+                .into_iter()
+                .map(|(t, i, r)| (t, i, SmolStr::new(r.into()))),
+        )
     }
 }

@@ -268,10 +268,7 @@ fn decode_ways(
             _deleted: !way.get_info().get_visible(),
             _changeset_id: Some(way.get_info().get_changeset() as u32),
             _uid: Some(way.get_info().get_uid() as u32),
-            _user: Some(
-                stringtable[way.get_info().get_user_sid() as usize]
-                    .clone()
-            ),
+            _user: Some(stringtable[way.get_info().get_user_sid() as usize].clone()),
             _version: Some(way.get_info().get_version() as u32),
             _timestamp: Some(timestamp),
         }));
@@ -373,12 +370,11 @@ fn decode_primitive_group_to_objs(
     let date_granularity = date_granularity / 1000;
     let mut num_objects_written = 0;
     if !primitive_group.get_nodes().is_empty() && object_filter.0 {
-        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
-        stringtable.extend(raw_stringtable
-            .take_s()
-            .into_iter()
-            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
-        );
+        let mut stringtable: Vec<SmolStr> =
+            Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+            SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
+        }));
 
         num_objects_written += decode_nodes(
             primitive_group,
@@ -390,12 +386,11 @@ fn decode_primitive_group_to_objs(
             sink,
         );
     } else if primitive_group.has_dense() && object_filter.0 {
-        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
-        stringtable.extend(raw_stringtable
-            .take_s()
-            .into_iter()
-            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
-        );
+        let mut stringtable: Vec<SmolStr> =
+            Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+            SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
+        }));
 
         num_objects_written += decode_dense_nodes(
             primitive_group,
@@ -407,12 +402,11 @@ fn decode_primitive_group_to_objs(
             sink,
         );
     } else if !primitive_group.get_ways().is_empty() && object_filter.1 {
-        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
-        stringtable.extend(raw_stringtable
-            .take_s()
-            .into_iter()
-            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
-        );
+        let mut stringtable: Vec<SmolStr> =
+            Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+            SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
+        }));
 
         num_objects_written += decode_ways(
             primitive_group,
@@ -424,12 +418,11 @@ fn decode_primitive_group_to_objs(
             sink,
         );
     } else if !primitive_group.get_relations().is_empty() && object_filter.2 {
-        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
-        stringtable.extend(raw_stringtable
-            .take_s()
-            .into_iter()
-            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
-        );
+        let mut stringtable: Vec<SmolStr> =
+            Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+            SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
+        }));
 
         num_objects_written += decode_relations(
             primitive_group,

@@ -1,6 +1,6 @@
 [package]
 name = "osmio"
-version = "0.14.0-dev"
+version = "0.14.0"
 authors = ["Amanda McCann <amanda@technomancy.org>"]
 keywords = ["openstreetmap", "osm"]
 license = "MIT OR Apache-2.0"
