@@ -366,50 +366,78 @@ fn decode_primitive_group_to_objs(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    stringtable: &[SmolStr],
+    mut raw_stringtable: osmformat::StringTable,
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let date_granularity = date_granularity / 1000;
     let mut num_objects_written = 0;
     if !primitive_group.get_nodes().is_empty() && object_filter.0 {
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable
+            .take_s()
+            .into_iter()
+            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
+        );
+
         num_objects_written += decode_nodes(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
-            stringtable,
+            &stringtable,
             sink,
         );
     } else if primitive_group.has_dense() && object_filter.0 {
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable
+            .take_s()
+            .into_iter()
+            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
+        );
+
         num_objects_written += decode_dense_nodes(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
-            stringtable,
+            &stringtable,
             sink,
         );
     } else if !primitive_group.get_ways().is_empty() && object_filter.1 {
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable
+            .take_s()
+            .into_iter()
+            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
+        );
+
         num_objects_written += decode_ways(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
-            stringtable,
+            &stringtable,
             sink,
         );
     } else if !primitive_group.get_relations().is_empty() && object_filter.2 {
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.get_s().iter().count());
+        stringtable.extend(raw_stringtable
+            .take_s()
+            .into_iter()
+            .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
+        );
+
         num_objects_written += decode_relations(
             primitive_group,
             granularity,
             lat_offset,
             lon_offset,
             date_granularity,
-            stringtable,
+            &stringtable,
             sink,
         );
     } else {
@@ -424,13 +452,7 @@ fn decode_block_to_objs(
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
-    let mut stringtable: Vec<SmolStr> = Vec::with_capacity(block.get_stringtable().get_s().iter().count());
-    stringtable.extend(block
-        .take_stringtable()
-        .take_s()
-        .into_iter()
-        .map(|chars| SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String")))
-    );
+    let raw_stringtable = block.take_stringtable();
 
     let granularity = block.get_granularity();
     let lat_offset = block.get_lat_offset();
@@ -439,18 +461,17 @@ fn decode_block_to_objs(
 
     let mut results = 0;
 
-    for primitive_group in block.get_primitivegroup() {
-        results += decode_primitive_group_to_objs(
-            primitive_group,
-            granularity,
-            lat_offset,
-            lon_offset,
-            date_granularity,
-            &stringtable,
-            object_filter,
-            sink,
-        );
-    }
+    assert_eq!(block.get_primitivegroup().len(), 1);
+    results += decode_primitive_group_to_objs(
+        &block.get_primitivegroup()[0],
+        granularity,
+        lat_offset,
+        lon_offset,
+        date_granularity,
+        raw_stringtable,
+        object_filter,
+        sink,
+    );
 
     results
 }
