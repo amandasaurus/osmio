@@ -21,7 +21,7 @@ fn main() {
     let mut last_print = start;
 
     for _ in pbf_reader.objects() {
-        if num_objects % 1_000 == 0 {
+        if num_objects % 1_000_000 == 0 {
             let now = Instant::now();
             let duration = now - last_print;
             if duration.as_millis() > 1_000 {
