@@ -1,5 +1,10 @@
 #![cfg(test)]
 use std::io::Cursor;
+use smol_str::SmolStr;
+
+use crate::obj_types::{StringNode, StringNodeBuilder, StringOSMObj, StringRelation, StringRelationBuilder, StringWay, StringWayBuilder};
+use crate::{Lat, Lon, OSMObjBase, OSMObjectType};
+
 use super::{XMLReader, XMLWriter};
 use super::super::{OSMReader, OSMWriter};
 use std::iter::Iterator;
@@ -23,18 +28,17 @@ fn test_parsing1() {
     assert!(!obj.is_none());
     let obj = obj.unwrap();
     match obj {
-        OSMObj::Node(n) => {
-            assert_eq!(n.id, 298884269);
-            assert_eq!(n.version, 1);
-            assert_eq!(n.deleted, false);
-            assert_eq!(n.changeset_id, 676636);
-            assert_eq!(n.timestamp.to_iso_string(), "2008-09-21T21:37:45Z");
-            assert_eq!(n.uid, 46882);
-            assert_eq!(n.user, "SvenHRO");
-            assert_eq!(n.lat, Some(54.0901746));
-            assert_eq!(n.lon, Some(12.2482632));
-            assert_eq!(n.tags.len(), 1);
-            assert_eq!(n.tags["mytag"], "myvalue");
+        StringOSMObj::Node(n) => {
+            assert_eq!(n._id, 298884269);
+            assert_eq!(n._version, Some(1));
+            assert_eq!(n._deleted, false);
+            assert_eq!(n._changeset_id, Some(676636));
+            assert_eq!(n._timestamp.unwrap().to_iso_string(), "2008-09-21T21:37:45Z");
+            assert_eq!(n._uid, Some(46882));
+            assert_eq!(n._user, Some(SmolStr::from("SvenHRO")));
+            assert_eq!(n._lat_lon, Some((Lat::try_from(54.0901746).unwrap(), Lon::try_from(12.2482632).unwrap())));
+            assert_eq!(n._tags.len(), 1);
+            assert_eq!(n._tags[0], (SmolStr::from("mytag"), SmolStr::from("myvalue")));
 
         },
         _ => { assert!(false); },
@@ -84,8 +88,8 @@ fn test_parsing2() {
     let mut reader = XMLReader::new(Cursor::new(sample1));
 
     match reader.next() {
-        Some(OSMObj::Node(n)) => {
-            assert_eq!(n.id, 298884269);
+        Some(StringOSMObj::Node(n)) => {
+            assert_eq!(n._id, 298884269);
             //assert_eq!(n.version, 1);
             //assert_eq!(n.deleted, false);
             //assert_eq!(n.changeset_id, 676636);
@@ -102,38 +106,38 @@ fn test_parsing2() {
     }
 
     match reader.next() {
-        Some(OSMObj::Node(_)) => {
+        Some(StringOSMObj::Node(_)) => {
         },
         _ => { assert!(false); },
     }
 
     match reader.next() {
-        Some(OSMObj::Node(n)) => {
-            assert_eq!(n.deleted, true);
+        Some(StringOSMObj::Node(n)) => {
+            assert_eq!(n._deleted, true);
         },
         _ => { assert!(false); },
     }
 
     match reader.next() {
-        Some(OSMObj::Node(_)) => {
+        Some(StringOSMObj::Node(_)) => {
         },
         _ => { assert!(false); },
     }
 
     match reader.next() {
-        Some(OSMObj::Way(w)) => {
-            assert_eq!(w.nodes, vec![292403538, 298884289, 261728686]);
-            assert_eq!(w.tags.len(), 2);
-            assert_eq!(w.tags["highway"], "unclassified");
+        Some(StringOSMObj::Way(w)) => {
+            assert_eq!(w.nodes(), vec![292403538, 298884289, 261728686]);
+            assert_eq!(w._tags.len(), 2);
+            assert_eq!(w.tag("highway"), Some("unclassified"));
         },
         _ => { assert!(false); },
     }
 
     match reader.next() {
-        Some(OSMObj::Relation(r)) => {
-            assert_eq!(r.members, vec![('n', 294942404, "".to_string()), ('n', 364933006, "".to_string()), ('w', 4579143, "".to_string()), ('n', 249673494, "".to_string())]);
-            assert_eq!(r.tags.len(), 6);
-            assert_eq!(r.tags["ref"], "123");
+        Some(StringOSMObj::Relation(r)) => {
+            assert_eq!(r._members, vec![(OSMObjectType::Node, 294942404, "".into()), (OSMObjectType::Node, 364933006, "".into()), (OSMObjectType::Way, 4579143, "".into()), (OSMObjectType::Node, 249673494, "".into())]);
+            assert_eq!(r._tags.len(), 6);
+            assert_eq!(r.tag("ref"), Some("123"));
         },
         _ => { assert!(false); },
     }
@@ -141,33 +145,52 @@ fn test_parsing2() {
 
 #[test]
 fn test_writer_empty() {
-    let output_cursor = Cursor::new(Vec::new());
-    let mut xml_writer = XMLWriter::new(output_cursor);
+    let mut output_cursor = Vec::new();
+    let mut xml_writer = XMLWriter::new(&mut output_cursor);
 
-    xml_writer.close();
+    drop(xml_writer);
 
-    let output = String::from_utf8(xml_writer.into_inner().into_inner()).unwrap();
-    assert_eq!(output, format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\" />", version()));
+    let output = String::from_utf8(output_cursor).unwrap();
+    assert_eq!(output, format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n</osm>", version()));
 }
 
 #[test]
 fn test_writer() {
-    let output_cursor = Cursor::new(Vec::new());
-    let mut xml_writer = XMLWriter::new(output_cursor);
+    let mut output_cursor = Vec::new();
+    let mut xml_writer = XMLWriter::new(&mut output_cursor);
 
-    let mut tags = HashMap::new();
-    tags.insert("highway".to_string(), "nevar".to_string());
-    xml_writer.write_obj(&OSMObj::Node(Node{ id: 1, version: 1, deleted: false, changeset_id: 1, user: "Username".to_string(), uid: 2, lat: Some(1.), lon: Some(2.), timestamp: TimestampFormat::ISOString("900 CE".to_string()), tags: tags.clone() })).ok();
+    let mut node = StringNodeBuilder::default()._id(1)._version(1)._deleted(false)._changeset_id(1)._uid(2)._timestamp(TimestampFormat::ISOString("900 CE".to_string())).build().unwrap();
+    node.set_lat_lon((1.,2.));
+    node.set_user("Username");
+    node.set_tag("highway", "nevar");
+    xml_writer.write_obj(&StringOSMObj::Node(node)).ok();
 
-    xml_writer.write_obj(&OSMObj::Way(Way{ id: 2, version: 1, deleted: false, changeset_id: 1, user: "Username".to_string(), uid: 2, timestamp: TimestampFormat::ISOString("900 CE".to_string()), tags: tags.clone(), nodes: vec![1, 2, 3] })).ok();
+    let mut way = StringWayBuilder::default()._id(2).build().unwrap();
+    way.set_version(1);
+    way.set_deleted(false);
+    way.set_changeset_id(1);
+    way.set_user("Username");
+    way.set_uid(2);
+    way.set_timestamp(TimestampFormat::ISOString("900 CE".to_string()));
+    way.set_tag("highway", "nevar");
+    way.set_nodes(vec![1, 2, 3]);
+    xml_writer.write_obj(&StringOSMObj::Way(way)).ok();
 
-    xml_writer.write_obj(&OSMObj::Relation(Relation{ id: 2, version: 1, deleted: false, changeset_id: 1, user: "Username".to_string(), uid: 2, timestamp: TimestampFormat::ISOString("900 CE".to_string()), tags: tags.clone(), members: vec![('n', 1, "".to_string()), ('w', 2, "".to_string() ) ]})).ok();
+    let mut relation = StringRelationBuilder::default()._id(2).build().unwrap();
+    relation.set_version(1);
+    relation.set_deleted(false);
+    relation.set_changeset_id(1);
+    relation.set_user("Username");
+    relation.set_uid(2);
+    relation.set_timestamp(TimestampFormat::ISOString("900 CE".to_string()));
+    relation.set_tag("highway", "nevar");
+    relation.set_members(vec![(OSMObjectType::Node, 1, ""),(OSMObjectType::Way, 2, "")]);
+    xml_writer.write_obj(&StringOSMObj::Relation(relation)).ok();
 
     xml_writer.close();
+    drop(xml_writer);
 
-    let output = String::from_utf8(xml_writer.into_inner().into_inner()).unwrap();
+    let output = String::from_utf8(output_cursor).unwrap();
     //println!("{}", output);
-    assert_eq!(output, format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n  <node id=\"1\" version=\"1\" user=\"Username\" uid=\"2\" changeset=\"1\" timestamp=\"900 CE\" lat=\"1\" lon=\"2\" visible=\"true\">\n    <tag k=\"highway\" v=\"nevar\" />\n  </node>\n  <way id=\"2\" version=\"1\" user=\"Username\" uid=\"2\" changeset=\"1\" timestamp=\"900 CE\" visible=\"true\">\n    <nd ref=\"1\" />\n    <nd ref=\"2\" />\n    <nd ref=\"3\" />\n    <tag k=\"highway\" v=\"nevar\" />\n  </way>\n  <relation id=\"2\" version=\"1\" user=\"Username\" uid=\"2\" changeset=\"1\" timestamp=\"900 CE\" visible=\"true\">\n    <member type=\"node\" ref=\"1\" role=\"\" />\n    <member type=\"way\" ref=\"2\" role=\"\" />\n    <tag k=\"highway\" v=\"nevar\" />\n  </relation>\n</osm>", version()));
-
-
+    assert_eq!(output, format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n\t<node id=\"1\" visible=\"true\" version=\"1\" user=\"Username\" uid=\"2\" changeset=\"1\" timestamp=\"900 CE\" lat=\"1\" lon=\"2\">\n\t\t<tag k=\"highway\" v=\"nevar\" />\n\t</node>\n\t<way id=\"2\" visible=\"true\" version=\"1\" user=\"Username\" uid=\"2\" changeset=\"1\" timestamp=\"900 CE\">\n\t\t<nd ref=\"1\" />\n\t\t<nd ref=\"2\" />\n\t\t<nd ref=\"3\" />\n\t\t<tag k=\"highway\" v=\"nevar\" />\n\t</way>\n\t<relation id=\"2\" visible=\"true\" version=\"1\" user=\"Username\" uid=\"2\" changeset=\"1\" timestamp=\"900 CE\">\n\t\t<member type=\"node\" ref=\"1\" role=\"\" />\n\t\t<member type=\"way\" ref=\"2\" role=\"\" />\n\t\t<tag k=\"highway\" v=\"nevar\" />\n\t</relation>\n</osm>", version()));
 }

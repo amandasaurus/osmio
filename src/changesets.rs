@@ -404,13 +404,4 @@ impl<R: Read> Iterator for ChangesetTagReader<R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn changeset_files() {
-        let mut osc = ChangesetTagReader::from_filename(
-            "/home/amanda/code/rust/osmio/changeset-examples.osm.bz2",
-        )
-        .unwrap();
-        dbg!(osc.next_tag().unwrap());
-    }
 }
