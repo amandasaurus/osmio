@@ -3,4 +3,5 @@ Cargo.lock
 .*.swp
 /*.osm.pbf
 /changeset-examples.osm*
+/heaptrack.*.zst
 /tarpaulin-report.html
