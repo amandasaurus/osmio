@@ -1,6 +1,6 @@
 target
 Cargo.lock
 .*.swp
-/tarpaulin-report.html
-/changeset-examples.osm*
 /*.osm.pbf
+/changeset-examples.osm*
+/tarpaulin-report.html
