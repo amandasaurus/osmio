@@ -21,9 +21,15 @@ quick-xml = "0.33"
 separator = "0.4.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rusqlite = "0.32"
 smallvec = "1.13.2"
 smol_str = "0.3.1"
 xml-rs = "0.8.0"
 
+rusqlite = { version = "0.32", optional = true }
 
+[features]
+with-changeset-sqlite = [ "dep:rusqlite" ]
+
+[[bin]]
+name = "osmio-changeset-tags-to-sqlite"
+required-features = [ "with-changeset-sqlite" ]

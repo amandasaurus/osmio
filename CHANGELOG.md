@@ -2,6 +2,10 @@
 
 # Unreleased
 
+* The binary `osmio-changeset-tags-to-sqlite` will only be built when the
+  `with-changeset-sqlite` feature is enabled. This reduces the dependencies for
+  when osmio is used as a library.
+
 # v0.14.0 (2024-09-08)
 
 * Internal refactoring to speed up
