@@ -247,21 +247,21 @@ impl From<std::num::ParseFloatError> for ParseLatLonError {
 #[derive(Debug, Clone, Eq, Serialize, Deserialize)]
 pub enum TimestampFormat {
     ISOString(String),
-    EpochNunber(i64),
+    EpochNumber(i64),
 }
 
 impl TimestampFormat {
     pub fn to_iso_string(&self) -> String {
         match self {
             TimestampFormat::ISOString(s) => s.clone(),
-            TimestampFormat::EpochNunber(t) => epoch_to_iso(*t as i32),
+            TimestampFormat::EpochNumber(t) => epoch_to_iso(*t as i32),
         }
     }
 
     pub fn to_epoch_number(&self) -> i64 {
         match self {
             TimestampFormat::ISOString(s) => iso_to_epoch(s) as i64,
-            &TimestampFormat::EpochNunber(t) => t,
+            &TimestampFormat::EpochNumber(t) => t,
         }
     }
 }
@@ -271,7 +271,7 @@ where
     T: Into<i64>,
 {
     fn from(v: T) -> Self {
-        TimestampFormat::EpochNunber(v.into())
+        TimestampFormat::EpochNumber(v.into())
     }
 }
 
@@ -282,7 +282,7 @@ impl std::str::FromStr for TimestampFormat {
         let date: i64 = chrono::DateTime::parse_from_rfc3339(s)
             .map_err(|_| "invalid date")?
             .timestamp();
-        Ok(TimestampFormat::EpochNunber(date))
+        Ok(TimestampFormat::EpochNumber(date))
     }
 }
 
@@ -296,7 +296,7 @@ impl std::cmp::PartialOrd for TimestampFormat {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match (self, other) {
             (TimestampFormat::ISOString(a), TimestampFormat::ISOString(b)) => a.partial_cmp(b),
-            (TimestampFormat::EpochNunber(a), TimestampFormat::EpochNunber(b)) => a.partial_cmp(b),
+            (TimestampFormat::EpochNumber(a), TimestampFormat::EpochNumber(b)) => a.partial_cmp(b),
             (a, b) => a.to_epoch_number().partial_cmp(&b.to_epoch_number()),
         }
     }
@@ -305,7 +305,7 @@ impl std::cmp::PartialEq for TimestampFormat {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (TimestampFormat::ISOString(a), TimestampFormat::ISOString(b)) => a.eq(b),
-            (TimestampFormat::EpochNunber(a), TimestampFormat::EpochNunber(b)) => a.eq(b),
+            (TimestampFormat::EpochNumber(a), TimestampFormat::EpochNumber(b)) => a.eq(b),
             (a, b) => a.to_epoch_number().eq(&b.to_epoch_number()),
         }
     }

@@ -75,14 +75,14 @@ mod timestamp_format {
 
     assert_cmp!(
         int_iso3,
-        TimestampFormat::EpochNunber(1577836800),
+        TimestampFormat::EpochNumber(1577836800),
         TimestampFormat::ISOString("2020-01-01T00:00:00Z".to_string()),
         Equal
     );
     assert_cmp!(
         int_iso4,
         TimestampFormat::ISOString("2020-01-01T00:00:00Z".to_string()),
-        TimestampFormat::EpochNunber(1577836800),
+        TimestampFormat::EpochNumber(1577836800),
         Equal
     );
 }

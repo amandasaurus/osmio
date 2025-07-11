@@ -2,6 +2,7 @@
 
 # Unreleased
 
+* BREAKING: Fix typo in `TimestampFormat::EpochNu_n_ber` -> `EpochNumber`
 * The binary `osmio-changeset-tags-to-sqlite` will only be built when the
   `with-changeset-sqlite` feature is enabled. This reduces the dependencies for
   when osmio is used as a library.
