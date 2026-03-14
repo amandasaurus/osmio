@@ -133,7 +133,7 @@ impl OSMObjBase for ArcOSMObj {
     }
     fn untagged(&self) -> bool {
         match self {
-            ArcOSMObj::Node(x) => x._tags.as_ref().map_or(true, |t| t.is_empty()),
+            ArcOSMObj::Node(x) => x._tags.as_ref().is_none_or(|t| t.is_empty()),
             ArcOSMObj::Way(x) => x._tags.is_empty(),
             ArcOSMObj::Relation(x) => x._tags.is_empty(),
         }
