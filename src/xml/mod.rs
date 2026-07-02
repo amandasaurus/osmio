@@ -537,7 +537,7 @@ mod tests {
     use crate::{Lat, Lon};
 
     macro_rules! assert_escape {
-        ( $name:ident, $input:expr, $output:expr ) => {
+        ( $name:ident, $input:expr_2021, $output:expr_2021 ) => {
             #[test]
             fn $name() {
                 let s = $input;
@@ -563,7 +563,7 @@ mod tests {
     );
 
     macro_rules! assert_write_obj {
-        ( $name:ident, $input:expr, $output:expr ) => {
+        ( $name:ident, $input:expr_2021, $output:expr_2021 ) => {
             #[test]
             fn $name() {
                 let o: StringOSMObj = $input.into();

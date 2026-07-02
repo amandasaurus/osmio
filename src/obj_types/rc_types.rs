@@ -133,7 +133,7 @@ impl OSMObjBase for RcOSMObj {
     }
     fn untagged(&self) -> bool {
         match self {
-            RcOSMObj::Node(x) => x._tags.as_ref().map_or(true, |t| t.is_empty()),
+            RcOSMObj::Node(x) => x._tags.as_ref().is_none_or(|t| t.is_empty()),
             RcOSMObj::Way(x) => x._tags.is_empty(),
             RcOSMObj::Relation(x) => x._tags.is_empty(),
         }

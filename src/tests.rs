@@ -27,7 +27,7 @@ mod timestamp_format {
     use std::cmp::*;
 
     macro_rules! assert_cmp {
-        ( $name:ident, $a:expr, $b:expr, $expected_ord:expr ) => {
+        ( $name:ident, $a:expr_2021, $b:expr_2021, $expected_ord:expr_2021 ) => {
             #[test]
             fn $name() {
                 let a: TimestampFormat = $a;
@@ -92,7 +92,7 @@ fn area_ways() {
     use crate::{obj_types::StringOSMObj, xml::XMLReader};
 
     macro_rules! assert_closed_area {
-        ($input: expr, $expect_is_closed: expr, $expect_is_area: expr) => {
+        ($input: expr_2021, $expect_is_closed: expr_2021, $expect_is_area: expr_2021) => {
             let mut reader = XMLReader::new($input.as_bytes());
             let mut found = false;
             for obj in reader.objects() {
