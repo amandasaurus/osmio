@@ -191,7 +191,7 @@ fn decode_dense_nodes(
         let timestamp = timestamps[index] as i32 + last_timestamp;
         let timestamp = timestamp * date_granularity;
         last_timestamp = timestamp;
-        let timestamp = TimestampFormat::EpochNunber(timestamp as i64);
+        let timestamp = TimestampFormat::EpochNumber(timestamp as i64);
         assert!(uid_id < i32::MAX);
 
         results.push_back(StringOSMObj::Node(StringNode {
@@ -259,7 +259,7 @@ fn decode_ways(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let timestamp = TimestampFormat::EpochNunber(way.get_info().get_timestamp());
+        let timestamp = TimestampFormat::EpochNumber(way.get_info().get_timestamp());
 
         results.push_back(StringOSMObj::Way(StringWay {
             _id: id,
@@ -339,7 +339,7 @@ fn decode_relations(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let timestamp = TimestampFormat::EpochNunber(relation.get_info().get_timestamp());
+        let timestamp = TimestampFormat::EpochNumber(relation.get_info().get_timestamp());
 
         sink.push_back(StringOSMObj::Relation(StringRelation {
             _id: id,
