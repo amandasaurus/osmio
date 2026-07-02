@@ -106,9 +106,8 @@ fn area_ways() {
         };
     }
 
-    let not_closed_input = r#"
-        <?xml version="1.0" encoding="utf-8"?>
-        <osm version="0.6" generator="osmio/0.4.0">\
+    let not_closed_input = r#"<?xml version="1.0" encoding="utf-8"?>
+        <osm version="0.6" generator="osmio/0.4.0">
         <node id="1" lat="0" lon="0" />
         <node id="2" lat="1" lon="0" />
         <node id="3" lat="1" lon="1" />
@@ -120,8 +119,7 @@ fn area_ways() {
         </osm>"#;
     assert_closed_area!(not_closed_input, false, false);
 
-    let closed_area_input = r#"
-        <?xml version="1.0" encoding="utf-8"?>
+    let closed_area_input = r#"<?xml version="1.0" encoding="utf-8"?>
         <osm version="0.6" generator="osmio/0.4.0">\
         <node id="1" lat="0" lon="0" />
         <node id="2" lat="1" lon="0" />
@@ -135,8 +133,7 @@ fn area_ways() {
         </osm>"#;
     assert_closed_area!(closed_area_input, true, true);
 
-    let closed_nonarea_input = r#"
-        <?xml version="1.0" encoding="utf-8"?>
+    let closed_nonarea_input = r#"<?xml version="1.0" encoding="utf-8"?>
         <osm version="0.6" generator="osmio/0.4.0">\
         <node id="1" lat="0" lon="0" />
         <node id="2" lat="1" lon="0" />
@@ -151,8 +148,7 @@ fn area_ways() {
         </osm>"#;
     assert_closed_area!(closed_nonarea_input, true, false);
 
-    let closed_explicit_area_input = r#"
-        <?xml version="1.0" encoding="utf-8"?>
+    let closed_explicit_area_input = r#"<?xml version="1.0" encoding="utf-8"?>
         <osm version="0.6" generator="osmio/0.4.0">\
         <node id="1" lat="0" lon="0" />
         <node id="2" lat="1" lon="0" />

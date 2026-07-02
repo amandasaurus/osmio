@@ -419,9 +419,12 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
     fn close(&mut self) -> Result<(), OSMWriteError> {
         self.ensure_header()?;
 
-        write!(self.writer, "\n</osm>")?;
+        if self.is_open(){
+            write!(self.writer, "\n</osm>")?;
 
-        self._state = State::Closed;
+            self._state = State::Closed;
+        }
+
 
         Ok(())
     }
@@ -448,7 +451,9 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             " visible=\"{}\"",
             if obj.deleted() { "false" } else { "true" }
         )?;
-        write!(self.writer, " version=\"{}\"", obj.version().unwrap())?;
+        if let Some(version) = obj.version() {
+            write!(self.writer, " version=\"{}\"", version)?;
+        }
         if let Some(user) = obj.user() {
             write!(self.writer, " user=\"")?;
             write_xml_escaped(&mut self.writer, user)?;
@@ -493,7 +498,7 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
                 if !member.2.is_empty() {
                     write_xml_escaped(&mut self.writer, member.2)?;
                 }
-                write!(self.writer, "\"/>")?;
+                write!(self.writer, "\" />")?;
             }
         }
 
@@ -589,6 +594,9 @@ mod tests {
 			._lat_lon((Lat(0), Lon(0)))
 			.build()
 			.unwrap(),
-	    format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n\t<node id=\"1\" visible=\"true\" version=\"2\" user=\"&amp;foo\" uid=\"1\" changeset=\"1\" timestamp=\"1970-01-01T00:11:40Z\" lat=\"0\" lon=\"0\" />\n</osm>\n</osm>", crate::version())
+	    format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n\t<node id=\"1\" visible=\"true\" version=\"2\" user=\"&amp;foo\" uid=\"1\" changeset=\"1\" timestamp=\"1970-01-01T00:11:40Z\" lat=\"0\" lon=\"0\" />\n</osm>", crate::version())
 	);
 }
+
+#[cfg(test)]
+mod test;

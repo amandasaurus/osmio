@@ -14,9 +14,12 @@ type NodeIdPos = (ObjId, (Lat, Lon));
 /// file
 ///
 /// ```
+/// # fn test() -> anyhow::Result<()> {
 /// let mut reader =
 /// osmio::stringpbf::PBFNodePositionReader::from_filename("region-latest.osm.pbf")?;
 /// let (nid, (lat, lon)) = reader.next().unwrap();
+/// # Ok(())
+/// # }
 /// ```
 pub struct PBFNodePositionReader<R: Read> {
     filereader: FileReader<R>,
