@@ -73,6 +73,7 @@ pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f
 pub mod prelude {
     //! Useful things for osmio
     pub use crate::OSMObj;
+    pub use crate::OSMObjBase;
     pub use crate::OSMObjectType;
     pub use crate::OSMReader;
     pub use crate::{Node, Relation, Way};
@@ -491,11 +492,11 @@ pub enum OSMObjectType {
 }
 
 impl OSMObjectType {
-    pub fn name_short(&self) -> &str {
+    pub fn name_short(&self) -> char {
         match self {
-            OSMObjectType::Node => "n",
-            OSMObjectType::Way => "w",
-            OSMObjectType::Relation => "r",
+            OSMObjectType::Node => 'n',
+            OSMObjectType::Way => 'w',
+            OSMObjectType::Relation => 'r',
         }
     }
     pub fn name_long(&self) -> &str {
