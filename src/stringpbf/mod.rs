@@ -75,7 +75,7 @@ impl<R: Read> FileReader<R> {
             let mut blob_bytes = vec![0; blob_header.datasize() as usize];
             self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
 
-            if blob_header.get_field_type() != "OSMData" {
+            if blob_header.type_.unwrap() != "OSMData" {
                 // keep going to the next blob
                 continue;
             }
@@ -235,7 +235,7 @@ fn decode_ways(
         assert_eq!(keys.len(), vals.len());
         tags.extend(keys.zip(vals));
 
-        let refs = way.refs;
+        let refs = &way.refs;
         let mut nodes = SmallVec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
@@ -286,7 +286,7 @@ fn decode_relations(
     let _last_timestamp = 0;
     let mut num_objects_written = 0;
     sink.reserve(primitive_group.relations.len());
-    for relation in primitive_group.relations {
+    for relation in primitive_group.relations.iter() {
         let id = relation.id() as ObjId;
         // TODO check for +itive keys/vals
         let keys = relation
@@ -383,9 +383,9 @@ fn decode_primitive_group_to_objs(
             &stringtable,
             sink,
         );
-    } else if primitive_group.has_dense() && object_filter.0 {
+    } else if primitive_group.dense.is_some() && object_filter.0 {
         let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.get_s().iter().count());
+            Vec::with_capacity(raw_stringtable.s.len());
         stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
