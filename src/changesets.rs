@@ -364,7 +364,7 @@ impl<R: Read> ChangesetTagReader<R> {
                                 Some(attr.decode_and_unescape_value(&self.reader)?.parse()?);
                         }
                     }
-                    self.tags.truncate(0);
+                    self.tags.clear();
                 }
                 Event::Start(ref e) | Event::Empty(ref e)
                     if e.name().local_name().as_ref() == b"tag" =>

@@ -34,7 +34,7 @@ struct FileReader<R: Read> {
 fn blob_raw_data(blob: &mut fileformat::Blob, buf: &mut Vec<u8>, _object_filter: &ObjectFilter) {
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
-    buf.truncate(0);
+    buf.clear();
     if blob.has_raw() {
         let raw = blob.get_raw();
         buf.reserve(raw.len());
@@ -551,7 +551,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
             // get the next block
             let mut blob = self.filereader.next()?;
 
-            blob_data.truncate(0);
+            blob_data.clear();
             blob_raw_data(&mut blob, &mut blob_data, &self.object_filter);
             if blob_data.is_empty() {
                 // maybe the filter meant nothing was read

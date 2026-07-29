@@ -587,7 +587,7 @@ impl Relation for StringRelation {
         &mut self,
         members: impl IntoIterator<Item = (OSMObjectType, ObjId, impl Into<String>)>,
     ) {
-        self._members.truncate(0);
+        self._members.clear();
         self._members.extend(
             members
                 .into_iter()

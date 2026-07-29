@@ -479,7 +479,7 @@ impl Way for RcWay {
         self._nodes.get(idx).cloned()
     }
     fn set_nodes(&mut self, nodes: impl IntoIterator<Item = impl Into<ObjId>>) {
-        self._nodes.truncate(0);
+        self._nodes.clear();
         self._nodes.extend(nodes.into_iter().map(|i| i.into()));
     }
 }
@@ -591,7 +591,7 @@ impl Relation for RcRelation {
         &mut self,
         members: impl IntoIterator<Item = (OSMObjectType, ObjId, impl Into<String>)>,
     ) {
-        self._members.truncate(0);
+        self._members.clear();
 
         self._members.extend(
             members
