@@ -25,7 +25,7 @@ smallvec = "1.15.2"
 smol_str = "0.3.6"
 xml-rs = "1.0.0"
 
-rusqlite = { version = "0.32", optional = true }
+rusqlite = { version = "0.40", optional = true }
 
 [features]
 with-changeset-sqlite = [ "dep:rusqlite" ]
