@@ -5,8 +5,8 @@ use std::iter::Iterator;
 use std::collections::VecDeque;
 
 use super::*;
-use protobuf::Message;
 use crate::COORD_PRECISION_NANOS;
+use protobuf::Message;
 
 /// (node id, (latitude, longitude))
 type NodeIdPos = (ObjId, (Lat, Lon));
@@ -60,7 +60,8 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
             let mut blob = self.filereader.next()?;
 
             blob_raw_data(&mut blob, &mut blob_data, &(true, false, false));
-            let block: osmformat::PrimitiveBlock = osmformat::PrimitiveBlock::parse_from_bytes(blob_data.as_slice()).unwrap();
+            let block: osmformat::PrimitiveBlock =
+                osmformat::PrimitiveBlock::parse_from_bytes(blob_data.as_slice()).unwrap();
 
             // Turn a block into OSM objects
             let _num_objects_read = decode_block_to_objs(block, &mut self.buffer);
@@ -79,9 +80,7 @@ fn decode_block_to_objs(block: osmformat::PrimitiveBlock, sink: &mut VecDeque<No
     for primitive_group in block.primitivegroup.iter() {
         if !primitive_group.nodes.is_empty() {
             unimplemented!()
-        } else if !primitive_group.ways.is_empty()
-            || !primitive_group.relations.is_empty()
-        {
+        } else if !primitive_group.ways.is_empty() || !primitive_group.relations.is_empty() {
             continue;
         } else if primitive_group.dense.is_some() {
             let dense = &primitive_group.dense.as_ref().unwrap();

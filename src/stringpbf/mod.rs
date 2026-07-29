@@ -6,12 +6,12 @@ use super::ObjId;
 use super::TimestampFormat;
 use byteorder;
 use byteorder::ReadBytesExt;
+use protobuf::Message;
 use smallvec::SmallVec;
 use smol_str::SmolStr;
 use std::collections::VecDeque;
 use std::io::{Cursor, Read};
 use std::iter::Iterator;
-use protobuf::Message;
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
@@ -229,7 +229,8 @@ fn decode_ways(
             .keys
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
-        let vals = way.vals
+        let vals = way
+            .vals
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         assert_eq!(keys.len(), vals.len());
@@ -319,11 +320,15 @@ fn decode_relations(
         let _num_members = member_ids.len();
         let member_ids = member_ids.iter();
 
-        let member_types = relation.types.iter().map(::protobuf::EnumOrUnknown::unwrap).map(|t| match t {
-            osmformat::relation::MemberType::NODE => OSMObjectType::Node,
-            osmformat::relation::MemberType::WAY => OSMObjectType::Way,
-            osmformat::relation::MemberType::RELATION => OSMObjectType::Relation,
-        });
+        let member_types = relation
+            .types
+            .iter()
+            .map(::protobuf::EnumOrUnknown::unwrap)
+            .map(|t| match t {
+                osmformat::relation::MemberType::NODE => OSMObjectType::Node,
+                osmformat::relation::MemberType::WAY => OSMObjectType::Way,
+                osmformat::relation::MemberType::RELATION => OSMObjectType::Relation,
+            });
 
         let members: Vec<_> = member_types
             .zip(member_ids)
@@ -368,11 +373,12 @@ fn decode_primitive_group_to_objs(
     let date_granularity = date_granularity / 1000;
     let mut num_objects_written = 0;
     if !primitive_group.nodes.is_empty() && object_filter.0 {
-        let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.s.len());
-        stringtable.extend(raw_stringtable.s.iter().map(|chars| {
-            SmolStr::from(str::from_utf8(chars).expect("Invalid, non-utf8 String"))
-        }));
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.s.len());
+        stringtable.extend(
+            raw_stringtable.s.iter().map(|chars| {
+                SmolStr::from(str::from_utf8(chars).expect("Invalid, non-utf8 String"))
+            }),
+        );
 
         num_objects_written += decode_nodes(
             primitive_group,
@@ -384,8 +390,7 @@ fn decode_primitive_group_to_objs(
             sink,
         );
     } else if primitive_group.dense.is_some() && object_filter.0 {
-        let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.s.len());
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.s.len());
         stringtable.extend(raw_stringtable.s.into_iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
@@ -400,8 +405,7 @@ fn decode_primitive_group_to_objs(
             sink,
         );
     } else if !primitive_group.ways.is_empty() && object_filter.1 {
-        let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.s.len());
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.s.len());
         stringtable.extend(raw_stringtable.s.into_iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
@@ -416,8 +420,7 @@ fn decode_primitive_group_to_objs(
             sink,
         );
     } else if !primitive_group.relations.is_empty() && object_filter.2 {
-        let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.s.len());
+        let mut stringtable: Vec<SmolStr> = Vec::with_capacity(raw_stringtable.s.len());
         stringtable.extend(raw_stringtable.s.into_iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
@@ -554,7 +557,8 @@ impl<R: Read> OSMReader for PBFReader<R> {
                 // maybe the filter meant nothing was read
                 continue;
             }
-            let block: osmformat::PrimitiveBlock = osmformat::PrimitiveBlock::parse_from_bytes(&blob_data).unwrap();
+            let block: osmformat::PrimitiveBlock =
+                osmformat::PrimitiveBlock::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
             decode_block_to_objs(block, &self.object_filter, &mut self.buffer);
