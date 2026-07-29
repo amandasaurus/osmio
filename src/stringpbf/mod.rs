@@ -11,6 +11,7 @@ use smol_str::SmolStr;
 use std::collections::VecDeque;
 use std::io::{Cursor, Read};
 use std::iter::Iterator;
+use protobuf::Message;
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
@@ -38,7 +39,7 @@ fn blob_raw_data(blob: &mut fileformat::Blob, buf: &mut Vec<u8>, _object_filter:
     if let Some(raw) = &blob.raw {
         buf.reserve(raw.len());
         buf.copy_from_slice(raw.as_slice());
-    } else if let Some(zlib_data) = &ublob.zlib_data {
+    } else if let Some(zlib_data) = &blob.zlib_data {
         let cursor = Cursor::new(zlib_data);
         ZlibDecoder::new(cursor).read_to_end(buf).unwrap();
     }
@@ -69,9 +70,9 @@ impl<R: Read> FileReader<R> {
                 .unwrap();
 
             let blob_header: fileformat::BlobHeader =
-                protobuf::parse_from_bytes(&header_bytes_vec).unwrap();
+                fileformat::BlobHeader::parse_from_bytes(&header_bytes_vec).unwrap();
 
-            let mut blob_bytes = vec![0; blob_header.get_datasize() as usize];
+            let mut blob_bytes = vec![0; blob_header.datasize() as usize];
             self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
 
             if blob_header.get_field_type() != "OSMData" {
@@ -79,7 +80,7 @@ impl<R: Read> FileReader<R> {
                 continue;
             }
 
-            let blob: fileformat::Blob = protobuf::parse_from_bytes(&blob_bytes).unwrap();
+            let blob: fileformat::Blob = protobuf::Message::parse_from_bytes(&blob_bytes).unwrap();
 
             return Some(blob);
         }
@@ -108,23 +109,23 @@ fn decode_dense_nodes(
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
-    let dense = primitive_group.dense;
-    let ids = dense.id;
-    let lats = dense.lat;
-    let lons = dense.lon;
-    let denseinfo = dense.denseinfo;
+    let dense = &primitive_group.dense;
+    let ids = &dense.id;
+    let lats = &dense.lat;
+    let lons = &dense.lon;
+    let denseinfo = &dense.denseinfo;
 
-    let uids = denseinfo.uid;
-    let changesets = denseinfo.changeset;
-    let user_sids = denseinfo.user_sid;
-    let timestamps = denseinfo.timestamp;
+    let uids = &denseinfo.uid;
+    let changesets = &denseinfo.changeset;
+    let user_sids = &denseinfo.user_sid;
+    let timestamps = &denseinfo.timestamp;
 
     let num_nodes = ids.len();
     results.reserve(num_nodes);
     // TODO assert that the id, denseinfo, lat, lon and optionally keys_vals has the same
     // length
 
-    let keys_vals = dense.keys_vals;
+    let keys_vals = &dense.keys_vals;
 
     let mut keys_vals_index = 0;
 
@@ -219,24 +220,22 @@ fn decode_ways(
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
-    let ways = primitive_group.get_ways();
-    results.reserve(ways.len());
-    for way in ways {
-        let id = way.get_id() as ObjId;
-        let mut tags = SmallVec::with_capacity(way.get_keys().len());
+    results.reserve(primitive_group.ways.len());
+    for way in primitive_group.ways.iter() {
+        let id = way.id.unwrap() as ObjId;
+        let mut tags = SmallVec::with_capacity(way.keys.len());
         // TODO check for +itive keys/vals
         let keys = way
-            .get_keys()
+            .keys
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
-        let vals = way
-            .get_vals()
+        let vals = way.vals
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         assert_eq!(keys.len(), vals.len());
         tags.extend(keys.zip(vals));
 
-        let refs = way.get_refs();
+        let refs = way.refs;
         let mut nodes = SmallVec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
@@ -257,17 +256,17 @@ fn decode_ways(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let timestamp = TimestampFormat::EpochNumber(way.get_info().get_timestamp());
+        let timestamp = TimestampFormat::EpochNumber(way.info.timestamp.unwrap());
 
         results.push_back(StringOSMObj::Way(StringWay {
             _id: id,
             _tags: tags,
             _nodes: nodes,
-            _deleted: !way.get_info().get_visible(),
-            _changeset_id: Some(way.get_info().get_changeset() as u32),
-            _uid: Some(way.get_info().get_uid() as u32),
-            _user: Some(stringtable[way.get_info().get_user_sid() as usize].clone()),
-            _version: Some(way.get_info().get_version() as u32),
+            _deleted: !way.info.visible.unwrap_or(false),
+            _changeset_id: Some(way.info.changeset.unwrap() as u32),
+            _uid: Some(way.info.uid.unwrap() as u32),
+            _user: Some(stringtable[way.info.user_sid.unwrap() as usize].clone()),
+            _version: Some(way.info.version.unwrap() as u32),
             _timestamp: Some(timestamp),
         }));
         num_objects_written += 1;
@@ -288,25 +287,25 @@ fn decode_relations(
     let mut num_objects_written = 0;
     sink.reserve(primitive_group.relations.len());
     for relation in primitive_group.relations {
-        let id = relation.id as ObjId;
+        let id = relation.id() as ObjId;
         // TODO check for +itive keys/vals
         let keys = relation
             .keys
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = relation
-            .get_vals()
+            .vals
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         assert_eq!(keys.len(), vals.len());
         let tags: SmallVec<_> = keys.zip(vals).collect();
 
         let roles = relation
-            .get_roles_sid()
+            .roles_sid
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
 
-        let refs = relation.get_memids();
+        let refs = &relation.memids;
         let mut member_ids = Vec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
@@ -320,7 +319,7 @@ fn decode_relations(
         let _num_members = member_ids.len();
         let member_ids = member_ids.iter();
 
-        let member_types = relation.get_types().iter().map(|t| match *t {
+        let member_types = relation.types.iter().map(::protobuf::EnumOrUnknown::unwrap).map(|t| match t {
             osmformat::relation::MemberType::NODE => OSMObjectType::Node,
             osmformat::relation::MemberType::WAY => OSMObjectType::Way,
             osmformat::relation::MemberType::RELATION => OSMObjectType::Relation,
@@ -337,17 +336,17 @@ fn decode_relations(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let timestamp = TimestampFormat::EpochNumber(relation.get_info().get_timestamp());
+        let timestamp = TimestampFormat::EpochNumber(relation.info.timestamp.unwrap());
 
         sink.push_back(StringOSMObj::Relation(StringRelation {
             _id: id,
             _tags: tags,
             _members: members,
-            _deleted: !relation.get_info().get_visible(),
-            _changeset_id: Some(relation.get_info().get_changeset() as u32),
-            _uid: Some(relation.get_info().get_uid() as u32),
-            _user: Some(stringtable[relation.get_info().get_user_sid() as usize].clone()),
-            _version: Some(relation.get_info().get_version() as u32),
+            _deleted: !relation.info.visible.unwrap(),
+            _changeset_id: Some(relation.info.changeset.unwrap() as u32),
+            _uid: Some(relation.info.uid.unwrap() as u32),
+            _user: Some(stringtable[relation.info.user_sid.unwrap() as usize].clone()),
+            _version: Some(relation.info.version.unwrap() as u32),
             _timestamp: Some(timestamp),
         }));
         num_objects_written += 1;
@@ -368,10 +367,10 @@ fn decode_primitive_group_to_objs(
 ) -> usize {
     let date_granularity = date_granularity / 1000;
     let mut num_objects_written = 0;
-    if !primitive_group.get_nodes().is_empty() && object_filter.0 {
+    if !primitive_group.nodes.is_empty() && object_filter.0 {
         let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.get_s().iter().count());
-        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+            Vec::with_capacity(raw_stringtable.s.len());
+        stringtable.extend(raw_stringtable.s.iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
 
@@ -555,7 +554,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
                 // maybe the filter meant nothing was read
                 continue;
             }
-            let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
+            let block: osmformat::PrimitiveBlock = osmformat::PrimitiveBlock::parse_from(&blob_data).unwrap();
 
             // Turn a block into OSM objects
             decode_block_to_objs(block, &self.object_filter, &mut self.buffer);
