@@ -65,7 +65,7 @@ impl<R: Read> FileReader<R> {
                 .unwrap();
 
             let blob_header: fileformat::BlobHeader =
-                fileformat::BlobHeader::parse_from_bytes(&header_bytes_vec.as_slice()).unwrap();
+                fileformat::BlobHeader::parse_from_bytes(header_bytes_vec.as_slice()).unwrap();
 
             let mut blob_bytes = vec![0; blob_header.datasize.unwrap() as usize];
             self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
@@ -440,7 +440,7 @@ fn decode_block_to_objs(block: osmformat::PrimitiveBlock) -> Vec<ArcOSMObj> {
         .stringtable
         .s
         .iter()
-        .map(|chars| std::str::from_utf8(&chars).ok().map(Arc::from))
+        .map(|chars| std::str::from_utf8(chars).ok().map(Arc::from))
         .collect();
 
     let granularity = block.granularity();

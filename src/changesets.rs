@@ -27,6 +27,7 @@ use super::*;
 use anyhow::{bail, ensure};
 use bzip2::read::MultiBzDecoder;
 use quick_xml::events::Event;
+use quick_xml::XmlVersion;
 use std::io::{BufReader, Read};
 
 /// A single OSM changeset entry
@@ -123,16 +124,16 @@ impl<R: Read> ChangesetReader<R> {
                         match attr.key.local_name().as_ref() {
                             b"id" => {
                                 changeset_builder
-                                    .id(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                    .id(attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?);
                             }
                             b"created_at" => {
                                 changeset_builder.created(TimestampFormat::ISOString(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
                                 ));
                             }
                             b"closed_at" => {
                                 changeset_builder.closed(TimestampFormat::ISOString(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
                                 ));
                             }
                             b"open" => {
@@ -144,21 +145,21 @@ impl<R: Read> ChangesetReader<R> {
                             }
                             b"user" => {
                                 changeset_builder.user(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
                                 );
                             }
                             b"uid" => {
                                 changeset_builder
-                                    .uid(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                    .uid(attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?);
                             }
                             b"num_changes" => {
                                 changeset_builder.num_changes(
-                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?,
                                 );
                             }
                             b"comments_count" => {
                                 changeset_builder.comments_count(
-                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?,
                                 );
                             }
                             _ => {}
@@ -186,13 +187,13 @@ impl<R: Read> ChangesetReader<R> {
                                     match attr.key.local_name().as_ref() {
                                         b"k" => {
                                             k = Some(
-                                                attr.decode_and_unescape_value(&self.reader)?
+                                                attr.normalized_value(XmlVersion::Implicit1_0)?
                                                     .to_string(),
                                             );
                                         }
                                         b"v" => {
                                             v = Some(
-                                                attr.decode_and_unescape_value(&self.reader)?
+                                                attr.normalized_value(XmlVersion::Implicit1_0)?
                                                     .to_string(),
                                             );
                                         }
@@ -225,16 +226,16 @@ impl<R: Read> ChangesetReader<R> {
                         match attr.key.local_name().as_ref() {
                             b"id" => {
                                 changeset_builder
-                                    .id(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                    .id(attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?);
                             }
                             b"created_at" => {
                                 changeset_builder.created(TimestampFormat::ISOString(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
                                 ));
                             }
                             b"closed_at" => {
                                 changeset_builder.closed(TimestampFormat::ISOString(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
                                 ));
                             }
                             b"open" => {
@@ -246,21 +247,21 @@ impl<R: Read> ChangesetReader<R> {
                             }
                             b"user" => {
                                 changeset_builder.user(
-                                    attr.decode_and_unescape_value(&self.reader)?.to_string(),
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
                                 );
                             }
                             b"uid" => {
                                 changeset_builder
-                                    .uid(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                    .uid(attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?);
                             }
                             b"num_changes" => {
                                 changeset_builder.num_changes(
-                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?,
                                 );
                             }
                             b"comments_count" => {
                                 changeset_builder.comments_count(
-                                    attr.decode_and_unescape_value(&self.reader)?.parse()?,
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?,
                                 );
                             }
                             _ => {}
@@ -361,7 +362,7 @@ impl<R: Read> ChangesetTagReader<R> {
                         let attr = attr?;
                         if attr.key.local_name().as_ref() == b"id" {
                             self.curr_id =
-                                Some(attr.decode_and_unescape_value(&self.reader)?.parse()?);
+                                Some(attr.normalized_value(XmlVersion::Implicit1_0)?.parse()?);
                         }
                     }
                     self.tags.clear();
@@ -375,10 +376,14 @@ impl<R: Read> ChangesetTagReader<R> {
                         let attr = attr?;
                         match attr.key.local_name().as_ref() {
                             b"k" => {
-                                k = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
+                                k = Some(
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
+                                );
                             }
                             b"v" => {
-                                v = Some(attr.decode_and_unescape_value(&self.reader)?.to_string());
+                                v = Some(
+                                    attr.normalized_value(XmlVersion::Implicit1_0)?.to_string(),
+                                );
                             }
                             _ => continue,
                         }
