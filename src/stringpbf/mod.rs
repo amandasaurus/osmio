@@ -35,12 +35,10 @@ fn blob_raw_data(blob: &mut fileformat::Blob, buf: &mut Vec<u8>, _object_filter:
     // TODO Shame this can't return a Option<&[u8]>, then I don't need blob to be mut. However I
     // get lifetime errors with bytes not living long enough.
     buf.clear();
-    if blob.has_raw() {
-        let raw = blob.get_raw();
+    if let Some(raw) = &blob.raw {
         buf.reserve(raw.len());
-        buf.copy_from_slice(raw);
-    } else if blob.has_zlib_data() {
-        let zlib_data = blob.get_zlib_data();
+        buf.copy_from_slice(raw.as_slice());
+    } else if let Some(zlib_data) = &ublob.zlib_data {
         let cursor = Cursor::new(zlib_data);
         ZlibDecoder::new(cursor).read_to_end(buf).unwrap();
     }
@@ -110,23 +108,23 @@ fn decode_dense_nodes(
     results: &mut VecDeque<StringOSMObj>,
 ) -> usize {
     let mut num_objects_written = 0;
-    let dense = primitive_group.get_dense();
-    let ids = dense.get_id();
-    let lats = dense.get_lat();
-    let lons = dense.get_lon();
-    let denseinfo = dense.get_denseinfo();
+    let dense = primitive_group.dense;
+    let ids = dense.id;
+    let lats = dense.lat;
+    let lons = dense.lon;
+    let denseinfo = dense.denseinfo;
 
-    let uids = denseinfo.get_uid();
-    let changesets = denseinfo.get_changeset();
-    let user_sids = denseinfo.get_user_sid();
-    let timestamps = denseinfo.get_timestamp();
+    let uids = denseinfo.uid;
+    let changesets = denseinfo.changeset;
+    let user_sids = denseinfo.user_sid;
+    let timestamps = denseinfo.timestamp;
 
     let num_nodes = ids.len();
     results.reserve(num_nodes);
     // TODO assert that the id, denseinfo, lat, lon and optionally keys_vals has the same
     // length
 
-    let keys_vals = dense.get_keys_vals();
+    let keys_vals = dense.keys_vals;
 
     let mut keys_vals_index = 0;
 
@@ -198,11 +196,11 @@ fn decode_dense_nodes(
             _id: id as ObjId,
             _tags: tags,
             _lat_lon: Some((Lat(internal_lat), Lon(internal_lon))),
-            _deleted: !denseinfo.get_visible().get(index).unwrap_or(&true),
+            _deleted: !denseinfo.visible.get(index).unwrap_or(&true),
             _changeset_id: Some(changeset_id as u32),
             _uid: Some(uid_id as u32),
             _user: Some(stringtable[user_sid as usize].clone()),
-            _version: Some(denseinfo.get_version()[index] as u32),
+            _version: Some(denseinfo.version[index] as u32),
             _timestamp: Some(timestamp),
         }));
         num_objects_written += 1
@@ -288,12 +286,12 @@ fn decode_relations(
 ) -> usize {
     let _last_timestamp = 0;
     let mut num_objects_written = 0;
-    sink.reserve(primitive_group.get_relations().len());
-    for relation in primitive_group.get_relations() {
-        let id = relation.get_id() as ObjId;
+    sink.reserve(primitive_group.relations.len());
+    for relation in primitive_group.relations {
+        let id = relation.id as ObjId;
         // TODO check for +itive keys/vals
         let keys = relation
-            .get_keys()
+            .keys
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = relation
@@ -323,9 +321,9 @@ fn decode_relations(
         let member_ids = member_ids.iter();
 
         let member_types = relation.get_types().iter().map(|t| match *t {
-            osmformat::Relation_MemberType::NODE => OSMObjectType::Node,
-            osmformat::Relation_MemberType::WAY => OSMObjectType::Way,
-            osmformat::Relation_MemberType::RELATION => OSMObjectType::Relation,
+            osmformat::relation::MemberType::NODE => OSMObjectType::Node,
+            osmformat::relation::MemberType::WAY => OSMObjectType::Way,
+            osmformat::relation::MemberType::RELATION => OSMObjectType::Relation,
         });
 
         let members: Vec<_> = member_types
@@ -448,16 +446,16 @@ fn decode_block_to_objs(
 ) -> usize {
     let raw_stringtable = block.take_stringtable();
 
-    let granularity = block.get_granularity();
-    let lat_offset = block.get_lat_offset();
-    let lon_offset = block.get_lon_offset();
-    let date_granularity = block.get_date_granularity();
+    let granularity = block.granularity();
+    let lat_offset = block.lat_offset();
+    let lon_offset = block.lon_offset();
+    let date_granularity = block.date_granularity();
 
     let mut results = 0;
 
-    assert_eq!(block.get_primitivegroup().len(), 1);
+    assert_eq!(block.primitivegroup().len(), 1);
     results += decode_primitive_group_to_objs(
-        &block.get_primitivegroup()[0],
+        &block.primitivegroup()[0],
         granularity,
         lat_offset,
         lon_offset,
