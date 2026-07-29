@@ -361,7 +361,7 @@ fn decode_primitive_group_to_objs(
     lat_offset: i64,
     lon_offset: i64,
     date_granularity: i32,
-    mut raw_stringtable: osmformat::StringTable,
+    raw_stringtable: osmformat::StringTable,
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
@@ -371,7 +371,7 @@ fn decode_primitive_group_to_objs(
         let mut stringtable: Vec<SmolStr> =
             Vec::with_capacity(raw_stringtable.s.len());
         stringtable.extend(raw_stringtable.s.iter().map(|chars| {
-            SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
+            SmolStr::from(str::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
 
         num_objects_written += decode_nodes(
@@ -386,7 +386,7 @@ fn decode_primitive_group_to_objs(
     } else if primitive_group.dense.is_some() && object_filter.0 {
         let mut stringtable: Vec<SmolStr> =
             Vec::with_capacity(raw_stringtable.s.len());
-        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+        stringtable.extend(raw_stringtable.s.into_iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
 
@@ -399,10 +399,10 @@ fn decode_primitive_group_to_objs(
             &stringtable,
             sink,
         );
-    } else if !primitive_group.get_ways().is_empty() && object_filter.1 {
+    } else if !primitive_group.ways.is_empty() && object_filter.1 {
         let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.get_s().iter().count());
-        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+            Vec::with_capacity(raw_stringtable.s.len());
+        stringtable.extend(raw_stringtable.s.into_iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
 
@@ -415,10 +415,10 @@ fn decode_primitive_group_to_objs(
             &stringtable,
             sink,
         );
-    } else if !primitive_group.get_relations().is_empty() && object_filter.2 {
+    } else if !primitive_group.relations.is_empty() && object_filter.2 {
         let mut stringtable: Vec<SmolStr> =
-            Vec::with_capacity(raw_stringtable.get_s().iter().count());
-        stringtable.extend(raw_stringtable.take_s().into_iter().map(|chars| {
+            Vec::with_capacity(raw_stringtable.s.len());
+        stringtable.extend(raw_stringtable.s.into_iter().map(|chars| {
             SmolStr::from(String::from_utf8(chars).expect("Invalid, non-utf8 String"))
         }));
 
@@ -443,7 +443,7 @@ fn decode_block_to_objs(
     object_filter: &ObjectFilter,
     sink: &mut VecDeque<StringOSMObj>,
 ) -> usize {
-    let raw_stringtable = block.take_stringtable();
+    let raw_stringtable = block.stringtable.take().unwrap();
 
     let granularity = block.granularity();
     let lat_offset = block.lat_offset();
@@ -452,9 +452,9 @@ fn decode_block_to_objs(
 
     let mut results = 0;
 
-    assert_eq!(block.primitivegroup().len(), 1);
+    assert_eq!(block.primitivegroup.len(), 1);
     results += decode_primitive_group_to_objs(
-        &block.primitivegroup()[0],
+        &block.primitivegroup[0],
         granularity,
         lat_offset,
         lon_offset,
@@ -554,7 +554,7 @@ impl<R: Read> OSMReader for PBFReader<R> {
                 // maybe the filter meant nothing was read
                 continue;
             }
-            let block: osmformat::PrimitiveBlock = osmformat::PrimitiveBlock::parse_from(&blob_data).unwrap();
+            let block: osmformat::PrimitiveBlock = osmformat::PrimitiveBlock::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
             decode_block_to_objs(block, &self.object_filter, &mut self.buffer);
