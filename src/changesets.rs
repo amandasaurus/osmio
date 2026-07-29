@@ -26,8 +26,8 @@
 use super::*;
 use anyhow::{bail, ensure};
 use bzip2::read::MultiBzDecoder;
-use quick_xml::events::Event;
 use quick_xml::XmlVersion;
+use quick_xml::events::Event;
 use std::io::{BufReader, Read};
 
 /// A single OSM changeset entry

@@ -2,9 +2,10 @@
 
 # Unreleased
 
+* Upgrade all dependencies.
+* Upgrade Rust edition from 2021 to 2024
 * BREAKING: Fix typo in `TimestampFormat::EpochNu_n_ber` -> `EpochNumber`
 * Internal refactoring
-* Upgrade all dependencies
 
 # v0.15.0 (2026-03-12)
 

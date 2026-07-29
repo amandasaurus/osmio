@@ -5,10 +5,10 @@ extern crate rusqlite;
 extern crate serde;
 extern crate serde_json;
 use iter_progress::OptionalProgressableIter;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use std::collections::HashMap;
 
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use osmio::changesets::ChangesetTagReader;
 use std::env::args;
 use std::path::PathBuf;

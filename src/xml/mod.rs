@@ -1,8 +1,8 @@
 //! XML file format
 
-use super::version;
 use super::ObjId;
 use super::TimestampFormat;
+use super::version;
 use super::{Node, OSMObj, OSMObjectType, Relation, Way};
 use super::{OSMReader, OSMWriteError, OSMWriter};
 use crate::obj_types::{StringNode, StringOSMObj, StringRelation, StringWay};
@@ -578,17 +578,21 @@ mod tests {
         };
     }
 
-    assert_write_obj!(node1,
+    assert_write_obj!(
+        node1,
         StringNodeBuilder::default()
-			._id(1)
-			._version(2)
-			._changeset_id(1)
-			._timestamp(700.into())
-			._uid(1)
-			._user("&foo".into())
-			._lat_lon((Lat(0), Lon(0)))
-			.build()
-			.unwrap(),
-	    format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n\t<node id=\"1\" visible=\"true\" version=\"2\" user=\"&amp;foo\" uid=\"1\" changeset=\"1\" timestamp=\"1970-01-01T00:11:40Z\" lat=\"0\" lon=\"0\" />\n</osm>\n</osm>", crate::version())
-	);
+            ._id(1)
+            ._version(2)
+            ._changeset_id(1)
+            ._timestamp(700.into())
+            ._uid(1)
+            ._user("&foo".into())
+            ._lat_lon((Lat(0), Lon(0)))
+            .build()
+            .unwrap(),
+        format!(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<osm version=\"0.6\" generator=\"osmio/{}\">\n\t<node id=\"1\" visible=\"true\" version=\"2\" user=\"&amp;foo\" uid=\"1\" changeset=\"1\" timestamp=\"1970-01-01T00:11:40Z\" lat=\"0\" lon=\"0\" />\n</osm>\n</osm>",
+            crate::version()
+        )
+    );
 }

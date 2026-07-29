@@ -1,7 +1,7 @@
 extern crate osmio;
 
-use osmio::osc::OSCReader;
 use osmio::OSMReader;
+use osmio::osc::OSCReader;
 use std::env::args;
 use std::fs::File;
 use std::io::BufReader;
