@@ -14,10 +14,11 @@ type NodeIdPos = (ObjId, (Lat, Lon));
 /// Reads a PBF file and returns just (nodeid, pos). This is a little faster than reading the whole
 /// file
 ///
-/// ```
+/// ```ignore
 /// let mut reader =
 /// osmio::stringpbf::PBFNodePositionReader::from_filename("region-latest.osm.pbf")?;
 /// let (nid, (lat, lon)) = reader.next().unwrap();
+/// # }
 /// ```
 pub struct PBFNodePositionReader<R: Read> {
     filereader: FileReader<R>,
