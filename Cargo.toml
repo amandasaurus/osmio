@@ -11,7 +11,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.5.0"
-bzip2 = "0.4"
+bzip2 = "0.6"
 chrono = "0.4.45"
 derive_builder = "0.20"
 flate2 = "1.1.9"
