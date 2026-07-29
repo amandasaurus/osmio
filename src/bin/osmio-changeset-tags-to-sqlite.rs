@@ -70,7 +70,7 @@ fn main() -> Result<()> {
         .assume_size(110_000_000)
     {
         if let Some(state) = state {
-            state.do_every_n_sec(2., |state| {
+            state.do_every_n_sec(2.0_f32, |state| {
                 println!(
                     "{:?}s {}k / {:.1}% done. eta: {} sec {:.0} per sec",
                     state.duration_since_start().as_secs(),
