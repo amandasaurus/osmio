@@ -347,7 +347,7 @@ fn decode_relations(
             _id: id,
             _tags: tags,
             _members: members,
-            _deleted: !relation.info.visible.unwrap(),
+            _deleted: !relation.info.visible.unwrap_or(false),
             _changeset_id: Some(relation.info.changeset.unwrap() as u32),
             _uid: Some(relation.info.uid.unwrap() as u32),
             _user: Some(stringtable[relation.info.user_sid.unwrap() as usize].clone()),
