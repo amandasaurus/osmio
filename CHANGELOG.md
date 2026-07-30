@@ -6,7 +6,7 @@
 
 * Fix bug parsing relations
 
-# v0.16.0 (2026-07-30)
+# v0.16.0 (2026-07-30) *yanked*
 
 * Upgrade all dependencies.
 * Upgrade Rust edition from 2021 to 2024
