@@ -2,6 +2,10 @@
 
 # Unreleased
 
+# v0.16.1 (2026-07-30)
+
+* Fix bug parsing relations
+
 # v0.16.0 (2026-07-30)
 
 * Upgrade all dependencies.
