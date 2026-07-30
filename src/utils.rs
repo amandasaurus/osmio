@@ -1,5 +1,5 @@
 //! Misc local utilities
-use chrono::{offset::Utc, DateTime};
+use chrono::{DateTime, offset::Utc};
 
 pub fn epoch_to_iso(epoch: i32) -> String {
     // Chrono is a little silly and can't easily convert from epoch to utc timezone

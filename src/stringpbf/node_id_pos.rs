@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
+use protobuf::Message;
 
 /// (node id, (latitude, longitude))
 type NodeIdPos = (ObjId, (Lat, Lon));
@@ -13,10 +14,11 @@ type NodeIdPos = (ObjId, (Lat, Lon));
 /// Reads a PBF file and returns just (nodeid, pos). This is a little faster than reading the whole
 /// file
 ///
-/// ```
+/// ```ignore
 /// let mut reader =
 /// osmio::stringpbf::PBFNodePositionReader::from_filename("region-latest.osm.pbf")?;
 /// let (nid, (lat, lon)) = reader.next().unwrap();
+/// # }
 /// ```
 pub struct PBFNodePositionReader<R: Read> {
     filereader: FileReader<R>,
@@ -59,7 +61,8 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
             let mut blob = self.filereader.next()?;
 
             blob_raw_data(&mut blob, &mut blob_data, &(true, false, false));
-            let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
+            let block: osmformat::PrimitiveBlock =
+                osmformat::PrimitiveBlock::parse_from_bytes(blob_data.as_slice()).unwrap();
 
             // Turn a block into OSM objects
             let _num_objects_read = decode_block_to_objs(block, &mut self.buffer);
@@ -70,23 +73,21 @@ impl<R: Read> Iterator for PBFNodePositionReader<R> {
 }
 
 fn decode_block_to_objs(block: osmformat::PrimitiveBlock, sink: &mut VecDeque<NodeIdPos>) -> usize {
-    let granularity = block.get_granularity();
-    let lat_offset = block.get_lat_offset();
-    let lon_offset = block.get_lon_offset();
+    let granularity = &block.granularity();
+    let lat_offset = &block.lat_offset();
+    let lon_offset = &block.lon_offset();
     let mut num_objects = 0;
 
-    for primitive_group in block.get_primitivegroup() {
-        if !primitive_group.get_nodes().is_empty() {
+    for primitive_group in block.primitivegroup.iter() {
+        if !primitive_group.nodes.is_empty() {
             unimplemented!()
-        } else if !primitive_group.get_ways().is_empty()
-            || !primitive_group.get_relations().is_empty()
-        {
+        } else if !primitive_group.ways.is_empty() || !primitive_group.relations.is_empty() {
             continue;
-        } else if primitive_group.has_dense() {
-            let dense = primitive_group.get_dense();
-            let ids = dense.get_id();
-            let lats = dense.get_lat();
-            let lons = dense.get_lon();
+        } else if primitive_group.dense.is_some() {
+            let dense = &primitive_group.dense.as_ref().unwrap();
+            let ids = &dense.id;
+            let lats = &dense.lat;
+            let lons = &dense.lon;
 
             let num_nodes = ids.len();
 

@@ -5,10 +5,10 @@ extern crate rusqlite;
 extern crate serde;
 extern crate serde_json;
 use iter_progress::OptionalProgressableIter;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use std::collections::HashMap;
 
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use osmio::changesets::ChangesetTagReader;
 use std::env::args;
 use std::path::PathBuf;
@@ -70,7 +70,7 @@ fn main() -> Result<()> {
         .assume_size(110_000_000)
     {
         if let Some(state) = state {
-            state.do_every_n_sec(2., |state| {
+            state.do_every_n_sec(2.0_f32, |state| {
                 println!(
                     "{:?}s {}k / {:.1}% done. eta: {} sec {:.0} per sec",
                     state.duration_since_start().as_secs(),
@@ -109,7 +109,7 @@ fn main() -> Result<()> {
         tags_json.truncate(0);
         serde_json::to_writer(&mut tags_json, &tags)?;
 
-        stmt.execute(params![cid, tags_json])?;
+        stmt.execute(params![cid as i64, tags_json])?;
         //txn.execute(
         //    //"INSERT INTO changeset_tags (id, imagery_used, locale, source, host, changesets_count, other_tags) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         //    //params![cid, imagery_used, locale, source, host, changesets_count, tags_json],

@@ -1,7 +1,6 @@
 //! PBF/Protobuf file format and return ArcOSMObj's
 //!
 //! Reading PBF files. Writing/creating PBF files is not currently supported or implemented
-use super::OSMReader;
 use super::ObjId;
 use super::TimestampFormat;
 use byteorder;
@@ -12,12 +11,12 @@ use std::sync::Arc;
 
 use super::*;
 use crate::COORD_PRECISION_NANOS;
+use protobuf::Message;
 
 use flate2::read::ZlibDecoder;
 
 use obj_types::{ArcNode, ArcOSMObj, ArcRelation, ArcWay};
 
-use protobuf;
 mod fileformat;
 mod osmformat;
 
@@ -30,10 +29,9 @@ fn blob_raw_data(blob: &mut fileformat::Blob) -> Option<Vec<u8>> {
     // get lifetime errors with bytes not living long enough.
     if blob.has_raw() {
         Some(blob.take_raw())
-    } else if blob.has_zlib_data() {
-        let zlib_data = blob.get_zlib_data();
+    } else if let Some(zlib_data) = &blob.zlib_data {
         let cursor = Cursor::new(zlib_data);
-        let mut bytes = Vec::with_capacity(blob.get_raw_size() as usize);
+        let mut bytes = Vec::with_capacity(blob.raw_size.unwrap() as usize);
         ZlibDecoder::new(cursor).read_to_end(&mut bytes).ok()?;
 
         Some(bytes)
@@ -67,17 +65,17 @@ impl<R: Read> FileReader<R> {
                 .unwrap();
 
             let blob_header: fileformat::BlobHeader =
-                protobuf::parse_from_bytes(&header_bytes_vec).unwrap();
+                fileformat::BlobHeader::parse_from_bytes(header_bytes_vec.as_slice()).unwrap();
 
-            let mut blob_bytes = vec![0; blob_header.get_datasize() as usize];
+            let mut blob_bytes = vec![0; blob_header.datasize.unwrap() as usize];
             self.reader.read_exact(blob_bytes.as_mut_slice()).unwrap();
 
-            if blob_header.get_field_type() != "OSMData" {
+            if blob_header.type_.unwrap() != "OSMData" {
                 // keep going to the next blob
                 continue;
             }
 
-            let blob: fileformat::Blob = protobuf::parse_from_bytes(&blob_bytes).unwrap();
+            let blob: fileformat::Blob = fileformat::Blob::parse_from_bytes(&blob_bytes).unwrap();
 
             return Some(blob);
         }
@@ -105,23 +103,23 @@ fn decode_dense_nodes(
     stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
-    let dense = primitive_group.get_dense();
-    let ids = dense.get_id();
-    let lats = dense.get_lat();
-    let lons = dense.get_lon();
-    let denseinfo = dense.get_denseinfo();
+    let dense = &primitive_group.dense;
+    let ids = &dense.id;
+    let lats = &dense.lat;
+    let lons = &dense.lon;
+    let denseinfo = &dense.denseinfo;
 
-    let uids = denseinfo.get_uid();
-    let changesets = denseinfo.get_changeset();
-    let user_sids = denseinfo.get_user_sid();
-    let timestamps = denseinfo.get_timestamp();
+    let uids = &denseinfo.uid;
+    let changesets = &denseinfo.changeset;
+    let user_sids = &denseinfo.user_sid;
+    let timestamps = &denseinfo.timestamp;
 
     let num_nodes = ids.len();
     results.reserve(num_nodes);
     // TODO assert that the id, denseinfo, lat, lon and optionally keys_vals has the same
     // length
 
-    let keys_vals = dense.get_keys_vals();
+    let keys_vals = &dense.keys_vals;
     let has_tags = !keys_vals.is_empty();
 
     let mut keys_vals_index = 0;
@@ -210,11 +208,11 @@ fn decode_dense_nodes(
             _id: id as ObjId,
             _tags: tags,
             _lat_lon: Some((Lat(internal_lat), Lon(internal_lon))),
-            _deleted: !denseinfo.get_visible().get(index).unwrap_or(&true),
+            _deleted: !denseinfo.visible.get(index).unwrap_or(&true),
             _changeset_id: Some(changeset_id as u32),
             _uid: Some(uid_id as u32),
             _user: Some(stringtable[user_sid as usize].clone().unwrap()),
-            _version: Some(denseinfo.get_version()[index] as u32),
+            _version: Some(denseinfo.version[index] as u32),
             _timestamp: Some(timestamp),
         }));
     }
@@ -231,17 +229,16 @@ fn decode_ways(
     stringtable: &[Option<Arc<str>>],
     results: &mut Vec<ArcOSMObj>,
 ) {
-    let ways = primitive_group.get_ways();
-    results.reserve(ways.len());
-    for way in ways {
-        let id = way.get_id() as ObjId;
+    results.reserve(primitive_group.ways.len());
+    for way in primitive_group.ways.iter() {
+        let id = way.id() as ObjId;
         // TODO check for +itive keys/vals
         let keys = way
-            .get_keys()
+            .keys
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = way
-            .get_vals()
+            .vals
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
@@ -252,7 +249,7 @@ fn decode_ways(
             })
             .collect();
 
-        let refs = way.get_refs();
+        let refs = &way.refs;
         let mut nodes = Vec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
@@ -273,22 +270,22 @@ fn decode_ways(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let timestamp = TimestampFormat::EpochNumber(way.get_info().get_timestamp());
+        let timestamp = TimestampFormat::EpochNumber(way.info.timestamp.unwrap());
 
         results.push(ArcOSMObj::Way(ArcWay {
             _id: id,
             _tags: tags,
             _nodes: nodes,
-            _deleted: !way.get_info().get_visible(),
-            _changeset_id: Some(way.get_info().get_changeset() as u32),
-            _uid: Some(way.get_info().get_uid() as u32),
+            _deleted: !way.info.visible.unwrap(),
+            _changeset_id: Some(way.info.changeset.unwrap() as u32),
+            _uid: Some(way.info.uid.unwrap() as u32),
             _user: Some(
-                stringtable[way.get_info().get_user_sid() as usize]
+                stringtable[way.info.user_sid.unwrap() as usize]
                     .clone()
                     .unwrap()
                     .clone(),
             ),
-            _version: Some(way.get_info().get_version() as u32),
+            _version: Some(way.info.version.unwrap() as u32),
             _timestamp: Some(timestamp),
         }));
     }
@@ -304,15 +301,15 @@ fn decode_relations(
     results: &mut Vec<ArcOSMObj>,
 ) {
     let _last_timestamp = 0;
-    for relation in primitive_group.get_relations() {
-        let id = relation.get_id() as ObjId;
+    for relation in primitive_group.relations.iter() {
+        let id = relation.id() as ObjId;
         // TODO check for +itive keys/vals
         let keys = relation
-            .get_keys()
+            .keys
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let vals = relation
-            .get_vals()
+            .vals
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
         let tags = keys.zip(vals);
@@ -324,11 +321,11 @@ fn decode_relations(
             .collect();
 
         let roles = relation
-            .get_roles_sid()
+            .roles_sid
             .iter()
             .map(|&idx| stringtable[idx as usize].clone());
 
-        let refs = relation.get_memids();
+        let refs = &relation.memids;
         let mut member_ids = Vec::with_capacity(refs.len());
         // TODO assert node.len() > 0
         if !refs.is_empty() {
@@ -342,11 +339,15 @@ fn decode_relations(
         let _num_members = member_ids.len();
         let member_ids = member_ids.iter();
 
-        let member_types = relation.get_types().iter().map(|t| match *t {
-            osmformat::Relation_MemberType::NODE => OSMObjectType::Node,
-            osmformat::Relation_MemberType::WAY => OSMObjectType::Way,
-            osmformat::Relation_MemberType::RELATION => OSMObjectType::Relation,
-        });
+        let member_types = relation
+            .types
+            .iter()
+            .map(::protobuf::EnumOrUnknown::unwrap)
+            .map(|t| match t {
+                osmformat::relation::MemberType::NODE => OSMObjectType::Node,
+                osmformat::relation::MemberType::WAY => OSMObjectType::Way,
+                osmformat::relation::MemberType::RELATION => OSMObjectType::Relation,
+            });
 
         let members: Vec<_> = member_types
             .zip(member_ids)
@@ -359,21 +360,21 @@ fn decode_relations(
         //let timestamp = timestamp * date_granularity;
         //last_timestamp = timestamp;
         //let timestamp = epoch_to_iso(timestamp);
-        let timestamp = TimestampFormat::EpochNumber(relation.get_info().get_timestamp());
+        let timestamp = TimestampFormat::EpochNumber(relation.info.timestamp.unwrap());
 
         results.push(ArcOSMObj::Relation(ArcRelation {
             _id: id,
             _tags: tags,
             _members: members,
-            _deleted: !relation.get_info().get_visible(),
-            _changeset_id: Some(relation.get_info().get_changeset() as u32),
-            _uid: Some(relation.get_info().get_uid() as u32),
+            _deleted: !relation.info.visible.unwrap(),
+            _changeset_id: Some(relation.info.changeset.unwrap() as u32),
+            _uid: Some(relation.info.uid.unwrap() as u32),
             _user: Some(
-                stringtable[relation.get_info().get_user_sid() as usize]
+                stringtable[relation.info.user_sid.unwrap() as usize]
                     .clone()
                     .unwrap(),
             ),
-            _version: Some(relation.get_info().get_version() as u32),
+            _version: Some(relation.info.version.unwrap() as u32),
             _timestamp: Some(timestamp),
         }));
     }
@@ -389,7 +390,7 @@ fn decode_primitive_group_to_objs(
     results: &mut Vec<ArcOSMObj>,
 ) {
     let date_granularity = date_granularity / 1000;
-    if !primitive_group.get_nodes().is_empty() {
+    if !primitive_group.nodes.is_empty() {
         decode_nodes(
             primitive_group,
             granularity,
@@ -399,7 +400,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             results,
         );
-    } else if primitive_group.has_dense() {
+    } else if primitive_group.dense.is_some() {
         decode_dense_nodes(
             primitive_group,
             granularity,
@@ -409,7 +410,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             results,
         );
-    } else if !primitive_group.get_ways().is_empty() {
+    } else if !primitive_group.ways.is_empty() {
         decode_ways(
             primitive_group,
             granularity,
@@ -419,7 +420,7 @@ fn decode_primitive_group_to_objs(
             stringtable,
             results,
         );
-    } else if !primitive_group.get_relations().is_empty() {
+    } else if !primitive_group.relations.is_empty() {
         decode_relations(
             primitive_group,
             granularity,
@@ -434,24 +435,24 @@ fn decode_primitive_group_to_objs(
     }
 }
 
-fn decode_block_to_objs(mut block: osmformat::PrimitiveBlock) -> Vec<ArcOSMObj> {
+fn decode_block_to_objs(block: osmformat::PrimitiveBlock) -> Vec<ArcOSMObj> {
     let stringtable: Vec<Option<Arc<str>>> = block
-        .take_stringtable()
-        .take_s()
-        .into_iter()
-        .map(|chars| std::str::from_utf8(&chars).ok().map(Arc::from))
+        .stringtable
+        .s
+        .iter()
+        .map(|chars| std::str::from_utf8(chars).ok().map(Arc::from))
         .collect();
 
-    let granularity = block.get_granularity();
-    let lat_offset = block.get_lat_offset();
-    let lon_offset = block.get_lon_offset();
-    let date_granularity = block.get_date_granularity();
+    let granularity = block.granularity();
+    let lat_offset = block.lat_offset();
+    let lon_offset = block.lon_offset();
+    let date_granularity = block.date_granularity();
 
     let mut results: Vec<ArcOSMObj> = Vec::new();
 
-    for primitive_group in block.get_primitivegroup() {
+    for primitive_group in block.primitivegroup {
         decode_primitive_group_to_objs(
-            primitive_group,
+            &primitive_group,
             granularity,
             lat_offset,
             lon_offset,
@@ -523,7 +524,8 @@ impl<R: Read> OSMReader for PBFReader<R> {
             let mut blob = self.filereader.next()?;
 
             let blob_data = blob_raw_data(&mut blob).unwrap();
-            let block: osmformat::PrimitiveBlock = protobuf::parse_from_bytes(&blob_data).unwrap();
+            let block: osmformat::PrimitiveBlock =
+                osmformat::PrimitiveBlock::parse_from_bytes(&blob_data).unwrap();
 
             // Turn a block into OSM objects
             let mut objs = decode_block_to_objs(block);
