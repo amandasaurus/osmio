@@ -178,13 +178,14 @@ fn get_tags(els: &mut [XmlEvent]) -> Vec<(SmolStr, SmolStr)> {
             ref mut attributes,
             ..
         } = el
-            && name.local_name == "tag" {
-                let ko = get_xml_attribute(attributes, "k");
-                let vo = get_xml_attribute(attributes, "v");
-                if let (Some(k), Some(v)) = (ko, vo) {
-                    result.push((SmolStr::new(k), SmolStr::new(v)));
-                }
+            && name.local_name == "tag"
+        {
+            let ko = get_xml_attribute(attributes, "k");
+            let vo = get_xml_attribute(attributes, "v");
+            if let (Some(k), Some(v)) = (ko, vo) {
+                result.push((SmolStr::new(k), SmolStr::new(v)));
             }
+        }
     }
 
     result
@@ -199,13 +200,14 @@ fn get_nodes(els: &mut [XmlEvent]) -> Vec<ObjId> {
             ref mut attributes,
             ..
         } = el
-            && name.local_name == "nd" {
-                let ref_id_o: Option<ObjId> =
-                    get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
-                if let Some(ref_id) = ref_id_o {
-                    result.push(ref_id);
-                }
+            && name.local_name == "nd"
+        {
+            let ref_id_o: Option<ObjId> =
+                get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
+            if let Some(ref_id) = ref_id_o {
+                result.push(ref_id);
             }
+        }
     }
 
     result
@@ -220,16 +222,17 @@ fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, SmolStr)> {
             ref mut attributes,
             ..
         } = el
-            && name.local_name == "member" {
-                let ref_id_o: Option<ObjId> =
-                    get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
-                let member_type_o: Option<OSMObjectType> =
-                    get_xml_attribute(attributes, "type").and_then(|t| t.parse().ok());
-                let role = SmolStr::new(get_xml_attribute(attributes, "role").unwrap_or_default());
-                if let (Some(ref_id), Some(member_type)) = (ref_id_o, member_type_o) {
-                    result.push((member_type, ref_id, role));
-                }
+            && name.local_name == "member"
+        {
+            let ref_id_o: Option<ObjId> =
+                get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
+            let member_type_o: Option<OSMObjectType> =
+                get_xml_attribute(attributes, "type").and_then(|t| t.parse().ok());
+            let role = SmolStr::new(get_xml_attribute(attributes, "role").unwrap_or_default());
+            if let (Some(ref_id), Some(member_type)) = (ref_id_o, member_type_o) {
+                result.push((member_type, ref_id, role));
             }
+        }
     }
 
     result
@@ -459,10 +462,11 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
         }
 
         if let Some(node) = obj.as_node()
-            && let Some((lat, lon)) = node.lat_lon() {
-                write!(self.writer, " lat=\"{}\"", lat)?;
-                write!(self.writer, " lon=\"{}\"", lon)?;
-            }
+            && let Some((lat, lon)) = node.lat_lon()
+        {
+            write!(self.writer, " lat=\"{}\"", lat)?;
+            write!(self.writer, " lon=\"{}\"", lon)?;
+        }
 
         if obj.is_node() && obj.untagged() {
             write!(self.writer, " />")?;
