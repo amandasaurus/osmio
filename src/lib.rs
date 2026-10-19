@@ -76,8 +76,8 @@ pub mod prelude {
     pub use crate::OSMObjBase;
     pub use crate::OSMObjectType;
     pub use crate::OSMReader;
-    pub use crate::{Node, Relation, Way};
     pub use crate::obj_types::StringOSMObj;
+    pub use crate::{Node, Relation, Way};
 }
 
 pub fn lat_lon_inner_to_degrees(inner: i32) -> f64 {
