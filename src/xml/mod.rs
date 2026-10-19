@@ -178,15 +178,13 @@ fn get_tags(els: &mut [XmlEvent]) -> Vec<(SmolStr, SmolStr)> {
             ref mut attributes,
             ..
         } = el
-        {
-            if name.local_name == "tag" {
+            && name.local_name == "tag" {
                 let ko = get_xml_attribute(attributes, "k");
                 let vo = get_xml_attribute(attributes, "v");
                 if let (Some(k), Some(v)) = (ko, vo) {
                     result.push((SmolStr::new(k), SmolStr::new(v)));
                 }
             }
-        }
     }
 
     result
@@ -201,15 +199,13 @@ fn get_nodes(els: &mut [XmlEvent]) -> Vec<ObjId> {
             ref mut attributes,
             ..
         } = el
-        {
-            if name.local_name == "nd" {
+            && name.local_name == "nd" {
                 let ref_id_o: Option<ObjId> =
                     get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
                 if let Some(ref_id) = ref_id_o {
                     result.push(ref_id);
                 }
             }
-        }
     }
 
     result
@@ -224,8 +220,7 @@ fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, SmolStr)> {
             ref mut attributes,
             ..
         } = el
-        {
-            if name.local_name == "member" {
+            && name.local_name == "member" {
                 let ref_id_o: Option<ObjId> =
                     get_xml_attribute(attributes, "ref").and_then(|e| e.parse().ok());
                 let member_type_o: Option<OSMObjectType> =
@@ -235,7 +230,6 @@ fn get_members(els: &mut [XmlEvent]) -> Vec<(OSMObjectType, ObjId, SmolStr)> {
                     result.push((member_type, ref_id, role));
                 }
             }
-        }
     }
 
     result
@@ -464,12 +458,11 @@ impl<W: Write> OSMWriter<W> for XMLWriter<W> {
             write!(self.writer, " timestamp=\"{}\"", timestamp)?;
         }
 
-        if let Some(node) = obj.as_node() {
-            if let Some((lat, lon)) = node.lat_lon() {
+        if let Some(node) = obj.as_node()
+            && let Some((lat, lon)) = node.lat_lon() {
                 write!(self.writer, " lat=\"{}\"", lat)?;
                 write!(self.writer, " lon=\"{}\"", lon)?;
             }
-        }
 
         if obj.is_node() && obj.untagged() {
             write!(self.writer, " />")?;

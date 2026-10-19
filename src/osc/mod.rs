@@ -178,12 +178,11 @@ impl<W: Write> OSMWriter<W> for OSCWriter<W> {
             write!(self.writer, " timestamp=\"{}\"", timestamp)?;
         }
 
-        if let Some(node) = obj.as_node() {
-            if let Some((lat, lon)) = node.lat_lon() {
+        if let Some(node) = obj.as_node()
+            && let Some((lat, lon)) = node.lat_lon() {
                 write!(self.writer, " lat=\"{}\"", lat)?;
                 write!(self.writer, " lon=\"{}\"", lon)?;
             }
-        }
 
         if obj.is_node() && obj.untagged() {
             write!(self.writer, " />")?;
